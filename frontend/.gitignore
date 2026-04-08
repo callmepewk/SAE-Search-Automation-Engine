@@ -1,5 +1,5 @@
 node_modules/
 .env
-backend/exports/
+exports/
 dist/
 .DS_Store
