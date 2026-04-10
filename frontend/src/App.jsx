@@ -75,7 +75,6 @@ const SmartSearchBar = ({ onSearch, isSearching }) => {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedFilters, setSelectedFilters] = useState([]);
   
-  // Geo State
   const [geoScope, setGeoScope] = useState(null); 
   const [isGeoConfirmed, setIsGeoConfirmed] = useState(false);
   const [showGeoPrompt, setShowGeoPrompt] = useState(false);
@@ -125,7 +124,6 @@ const SmartSearchBar = ({ onSearch, isSearching }) => {
   return (
     <div className="relative flex items-center" ref={searchRef}>
       
-      {/* Geo Selector Toggle */}
       <button 
         type="button"
         onClick={() => setShowGeoPrompt(!showGeoPrompt)}
@@ -138,7 +136,6 @@ const SmartSearchBar = ({ onSearch, isSearching }) => {
         <ChevronDown size={14} />
       </button>
 
-      {/* Input de Busca */}
       <form onSubmit={handleSubmit} className="relative z-40 flex items-center">
         <input 
           type="text" 
@@ -158,7 +155,6 @@ const SmartSearchBar = ({ onSearch, isSearching }) => {
         </button>
       </form>
 
-      {/* Botão de Filtros */}
       <button 
         type="button"
         onClick={() => setShowFilters(!showFilters)}
@@ -171,7 +167,6 @@ const SmartSearchBar = ({ onSearch, isSearching }) => {
         {selectedFilters.length > 0 && <span className="bg-cyan-400 text-black text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center ml-1">{selectedFilters.length}</span>}
       </button>
 
-      {/* Dropdown de Autocomplete */}
       {showSuggestions && suggestions.length > 0 && (
         <div className="absolute top-12 left-32 w-full max-w-md bg-[#0b1121]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.7)] z-50 overflow-hidden">
           <div className="p-2 bg-white/5 border-b border-white/10 text-xs font-bold text-gray-500 uppercase tracking-widest">Base de Inteligência OMNI</div>
@@ -186,7 +181,6 @@ const SmartSearchBar = ({ onSearch, isSearching }) => {
         </div>
       )}
 
-      {/* Pop-up de Geolocalização (Obrigatório) */}
       {showGeoPrompt && !isGeoConfirmed && (
         <div className="absolute top-14 left-0 w-80 bg-[#0b1121] border border-cyan-500/30 rounded-xl shadow-2xl z-50 p-5 animate-fade-in">
           <div className="flex items-center space-x-3 mb-4 border-b border-white/10 pb-3">
@@ -202,7 +196,6 @@ const SmartSearchBar = ({ onSearch, isSearching }) => {
         </div>
       )}
 
-      {/* Painel de Filtros Avançados */}
       {showFilters && (
         <div className="absolute top-14 right-0 w-80 md:w-[600px] bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.7)] z-50 animate-fade-in flex flex-col max-h-[80vh]">
           <div className="p-5 border-b border-white/5">
@@ -259,8 +252,18 @@ const ReportDashboard = ({ data, onClose, onNewSearch }) => {
               <div className="flex items-center space-x-3 text-sm font-mono text-cyan-400 mt-1">
                 <span className="flex items-center"><MapPin size={12} className="mr-1"/> {data.region}</span>
                 <span>|</span>
-                <span>STATUS: {data.narrative.status}</span>
+                <span>STATUS: {data.narrative?.status || "OMNI CONNECTED"}</span>
               </div>
+              {/* OMNI TRANSLATIONS BADGE */}
+              {data.global_terms && Object.keys(data.global_terms).length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {Object.entries(data.global_terms).slice(0, 5).map(([lang, term]) => (
+                    <span key={lang} className="text-[10px] bg-white/5 border border-white/10 px-2 py-0.5 rounded text-gray-400 uppercase flex items-center">
+                      <span className="text-cyan-400 font-bold mr-1">{lang}:</span> {term}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
           <div className="flex space-x-3">
@@ -274,6 +277,26 @@ const ReportDashboard = ({ data, onClose, onNewSearch }) => {
 
         <div className="p-10 space-y-10 pb-32">
           
+          {/* SCORE BOARD */}
+          <section className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="bg-gradient-to-br from-cyan-900/40 to-[#0b1121] border border-cyan-500/30 rounded-2xl p-6 shadow-[0_0_20px_rgba(6,182,212,0.15)] flex flex-col justify-center items-center text-center">
+              <p className="text-xs font-black text-cyan-400 uppercase tracking-widest mb-2">Score de Oportunidade OMNI</p>
+              <p className="text-6xl font-black text-white drop-shadow-md">{data.marketScore?.overall_score || "N/A"}</p>
+            </div>
+            <div className="bg-[#0b1121] border border-white/10 rounded-2xl p-6 flex flex-col justify-center text-center">
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Média Geral do Mercado</p>
+              <p className="text-4xl font-black text-gray-300">{data.marketScore?.market_average || "N/A"}</p>
+            </div>
+            <div className="bg-[#0b1121] border border-white/10 rounded-2xl p-6 flex flex-col justify-center text-center">
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Potencial Est. (Receita/Mês)</p>
+              <p className="text-4xl font-black text-green-400">{data.marketScore?.total_potential || "N/A"}</p>
+            </div>
+            <div className="bg-[#0b1121] border border-white/10 rounded-2xl p-6 flex flex-col justify-center text-center">
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Termo Mais Rentável</p>
+              <p className="text-2xl font-black text-indigo-400 truncate w-full px-2" title={data.marketScore?.best_keyword}>{data.marketScore?.best_keyword || "N/A"}</p>
+            </div>
+          </section>
+
           {/* 1. NARRATIVA CONSULTORIA (MCKINSEY STYLE) */}
           <section className="bg-[#0b1121] border border-white/10 rounded-2xl p-8 shadow-xl">
             <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.2em] mb-6 flex items-center">
@@ -282,23 +305,23 @@ const ReportDashboard = ({ data, onClose, onNewSearch }) => {
             <div className="grid grid-cols-1 md:grid-cols-5 gap-6 text-sm text-gray-300 leading-relaxed">
               <div className="md:col-span-1 bg-black/20 p-5 rounded-xl border border-white/5">
                 <p className="text-cyan-400 font-bold uppercase mb-2 text-xs">Contexto Macro</p>
-                {data.narrative.context}
+                {data.narrative?.context}
               </div>
               <div className="md:col-span-1 bg-black/20 p-5 rounded-xl border border-white/5">
                 <p className="text-indigo-400 font-bold uppercase mb-2 text-xs">Análise de Dados</p>
-                {data.narrative.analysis}
+                {data.narrative?.analysis}
               </div>
               <div className="md:col-span-1 bg-black/20 p-5 rounded-xl border border-white/5">
                 <p className="text-yellow-400 font-bold uppercase mb-2 text-xs">Interpretação</p>
-                {data.narrative.interpretation}
+                {data.narrative?.interpretation}
               </div>
               <div className="md:col-span-1 bg-gradient-to-b from-green-500/10 to-transparent p-5 rounded-xl border border-green-500/20">
                 <p className="text-green-400 font-bold uppercase mb-2 text-xs">Recomendação Tática</p>
-                {data.narrative.recommendation}
+                {data.narrative?.recommendation}
               </div>
               <div className="md:col-span-1 bg-gradient-to-b from-red-500/10 to-transparent p-5 rounded-xl border border-red-500/20">
                 <p className="text-red-400 font-bold uppercase mb-2 text-xs">Risco e Saturação</p>
-                {data.narrative.risk}
+                {data.narrative?.risk}
               </div>
             </div>
           </section>
@@ -314,12 +337,12 @@ const ReportDashboard = ({ data, onClose, onNewSearch }) => {
                   <tr><th className="pb-3">Métrica</th><th className="pb-3 text-cyan-400">{data.region}</th><th className="pb-3 text-indigo-400">Global (Média)</th><th className="pb-3 text-right">Delta OMNI</th></tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {data.comparison.map((row, i) => (
+                  {data.comparison && data.comparison.map((row, i) => (
                     <tr key={i} className="hover:bg-white/[0.02]">
                       <td className="py-4 font-bold text-gray-300">{row.metric}</td>
                       <td className="py-4 text-white font-mono">{row.br}</td>
                       <td className="py-4 text-gray-400 font-mono">{row.global}</td>
-                      <td className={`py-4 text-right font-black ${row.delta.includes('+') ? 'text-green-400' : 'text-red-400'}`}>{row.delta}</td>
+                      <td className={`py-4 text-right font-black ${row.delta.includes('+') || row.delta.includes('Oportunidade') ? 'text-green-400' : 'text-red-400'}`}>{row.delta}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -335,16 +358,16 @@ const ReportDashboard = ({ data, onClose, onNewSearch }) => {
               <div className="space-y-6 relative z-10">
                 <div className="bg-black/40 p-4 rounded-xl border border-white/5">
                   <p className="text-xs text-gray-500 uppercase mb-1">Horizonte 3 Meses</p>
-                  <p className="text-sm text-gray-200 font-medium">{data.projections.m3}</p>
+                  <p className="text-sm text-gray-200 font-medium">{data.projections?.m3}</p>
                 </div>
                 <div className="bg-black/40 p-4 rounded-xl border border-white/5">
                   <p className="text-xs text-gray-500 uppercase mb-1">Horizonte 6 Meses</p>
-                  <p className="text-sm text-gray-200 font-medium">{data.projections.m6}</p>
+                  <p className="text-sm text-gray-200 font-medium">{data.projections?.m6}</p>
                 </div>
                 <div>
                   <p className="text-xs text-indigo-400 font-bold uppercase mb-2">Sub-Tendências Emergentes:</p>
                   <ul className="space-y-2">
-                    {data.projections.trends.map((t, i) => (
+                    {data.projections?.trends && data.projections.trends.map((t, i) => (
                       <li key={i} className="text-xs text-gray-400 flex items-center"><ArrowUpRight size={12} className="text-green-400 mr-2"/> {t}</li>
                     ))}
                   </ul>
@@ -360,7 +383,7 @@ const ReportDashboard = ({ data, onClose, onNewSearch }) => {
                 <Activity className="mr-2 text-cyan-400" size={16}/> Top 5 Procedimentos Correlatos
               </h3>
               <div className="space-y-4">
-                {data.topProcedures.map((proc, idx) => (
+                {data.topProcedures && data.topProcedures.map((proc, idx) => (
                   <div key={idx} className="bg-white/5 p-4 rounded-xl flex flex-col border border-white/5 hover:border-cyan-500/30 transition-colors">
                     <div className="flex justify-between items-center mb-2 border-b border-white/5 pb-2">
                       <div>
@@ -383,7 +406,7 @@ const ReportDashboard = ({ data, onClose, onNewSearch }) => {
                 <Zap className="mr-2 text-yellow-400" size={16}/> Top Hardware & EBDs Recomendados
               </h3>
               <div className="space-y-4">
-                {data.topLasers.map((laser, idx) => (
+                {data.topLasers && data.topLasers.map((laser, idx) => (
                   <div key={idx} className="bg-white/5 p-4 rounded-xl flex justify-between items-center border border-white/5 hover:border-yellow-500/30 transition-colors">
                     <div>
                       <p className="font-bold text-white text-sm flex items-center">
@@ -429,7 +452,8 @@ export default function App() {
       try {
         const response = await fetch('https://sae-9wqa.onrender.com/api/radar');
         const fetchedData = await response.json();
-        setLiveData(fetchedData);
+        // 🟢 FIX: O backend agora manda { data: [...], meta: {...} }
+        setLiveData(fetchedData.data || []);
         setIsLoading(false);
       } catch (error) {
         console.error("Alerta de conexão com o Motor:", error);
@@ -443,7 +467,7 @@ export default function App() {
     return () => { window.removeEventListener('scroll', handleScroll); clearInterval(interval); };
   }, []);
 
-  // --- 🎯 CORE: HANDLE SEARCH E SCHEMA DO BOT (McKinsey Style) ---
+  // --- 🎯 CORE: HANDLE SEARCH CONECTADO AO MOTOR REAL ---
   const handleSearch = async (query, filters, geo) => {
     const currentUsage = checkDailyLimit();
     if (currentUsage.count >= DAILY_LIMIT) {
@@ -455,53 +479,32 @@ export default function App() {
     setShowLimitAlert(false);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
       const keywordTarget = query || filters.join(' + ') || 'Análise de Mercado Ampla';
       
-      const mockDynamicSchema = {
-        keyword: keywordTarget,
-        region: geo || "Brasil (Nacional)",
-        category: filters.length > 0 ? "Análise Multi-Filtro" : "Busca Direta",
-        narrative: {
-          status: "ALERTA DE OPORTUNIDADE",
-          context: `A macroanálise de "${keywordTarget}" revela uma transição de comportamento de consumo. Pacientes não buscam mais apenas a correção, mas a prevenção ativa e segurança percebida.`,
-          analysis: "Os dados de tráfego mostram um CAC (Custo de Aquisição) acessível, porém o volume de buscas informacionais (topo de funil) supera a intenção de compra direta em 60%.",
-          interpretation: "A anomalia aqui é clara: o mercado está ávido pela solução, mas carece de autoridade clínica. Quem educar o paciente agora fechará o tratamento no próximo trimestre.",
-          recommendation: "Invista agressivamente na desmistificação do procedimento. Crie pacotes focados em 'Jornada de Tratamento' e não em sessões avulsas.",
-          risk: "Alta vulnerabilidade à guerra de preços. Concorrentes com máquinas e insumos genéricos (K-Beauty) estão canibalizando a margem. Diferencie-se pelo protocolo exclusivo."
-        },
-        comparison: [
-          { metric: 'Volume Mensal Est.', br: '142.000', global: '2.1M', delta: '+14% BR' },
-          { metric: 'Taxa de Crescimento (Y/Y)', br: '34%', global: '18%', delta: '+16% BR' },
-          { metric: 'Ticket Médio', br: 'R$ 1.800', global: 'US$ 650', delta: 'Margem Alta' },
-          { metric: 'Saturação (Ads)', br: 'Alto', global: 'Extremo', delta: 'Oceano Azul Regional' }
-        ],
-        projections: {
-          m3: "Crescimento contínuo de 12% sustentado pelas campanhas de influenciadores locais. Início de formação de combos com tecnologias agregadas.",
-          m6: "Risco de platô se a tecnologia for comoditizada. Necessidade urgente de associar o procedimento a injetáveis para justificar ticket premium.",
-          trends: ["Busca por resultados ultra-naturais", "Associação do procedimento com Exossomos", "Protocolos resolutivos de sessão única"]
-        },
-        topProcedures: [
-          { name: "Preenchimento Facial 3D", volume: "45k", ticket: "2.500", interpretation: "Alta sinergia de venda cruzada. Paciente já com intenção de compra." },
-          { name: "Bioestimulador PLLA", volume: "38k", ticket: "3.200", interpretation: "Excelente para ancoragem de preço (Ticket alto)." },
-          { name: "Fios de Sustentação", volume: "12k", ticket: "4.000", interpretation: "Oceano azul. Baixa concorrência em anúncios locais." },
-          { name: "Peeling Avançado", volume: "25k", ticket: "800", interpretation: "Produto de entrada (Tripwire) para qualificar o lead." }
-        ],
-        topLasers: [
-          { type: "HIFU", name: "Ultraformer MPT", maker: "Classys", origin: "Coreia", cost: "R$ 400k", roi: "6 Meses", apps: "Lifting e Gordura Localizada" },
-          { type: "Thulium", name: "Lavieen", maker: "Wontech", origin: "Coreia", cost: "R$ 250k", roi: "4 Meses", apps: "BB Laser, Manchas, Poros" },
-          { type: "Nd:YAG", name: "StarWalker", maker: "Fotona", origin: "Eslovênia", cost: "R$ 600k", roi: "12 Meses", apps: "Melasma Complexo, Tatuagem" },
-          { type: "RF Microagulhada", name: "Morpheus8", maker: "InMode", origin: "Israel", cost: "R$ 500k", roi: "8 Meses", apps: "Flacidez Profunda, Cicatriz" }
-        ]
-      };
+      // 🟢 FIX: Post real na API do motor (Removemos o mockDynamicSchema)
+      const response = await fetch('https://sae-9wqa.onrender.com/api/dossie', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          keyword: keywordTarget, 
+          filters: filters, 
+          region: geo || "Brasil (Nacional)" 
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erro na API: Status ${response.status}`);
+      }
+
+      const realDynamicSchema = await response.json();
 
       incrementUsage(currentUsage);
       setUsageInfo(currentUsage);
-      setReportData(mockDynamicSchema);
+      setReportData(realDynamicSchema);
 
     } catch (error) {
       console.error("Falha RABI:", error);
+      alert("Falha ao comunicar com o Motor SAE. Verifique o console.");
     } finally {
       setIsSearching(false);
     }
@@ -548,7 +551,7 @@ export default function App() {
       
       <main className="max-w-7xl mx-auto px-4 md:px-10 py-12 relative z-10">
         
-        {/* LIVE RADAR 3.0 (UPGRADE DE SINAIS VITÁIS) */}
+        {/* LIVE RADAR 3.0 */}
         <section className="mb-20">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center space-x-3">
@@ -618,7 +621,8 @@ export default function App() {
               <TrendingUp className="text-cyan-400" size={32} />
               <h2 className="text-4xl font-black tracking-tight">Projeção de Crescimento</h2>
             </div>
-            <ChartWidget />
+            {/* 🟢 FIX: O componente agora recebe os dados ou usa o mock como fallback */}
+            <ChartWidget data={reportData?.projections?.chartData || mockChartData} />
           </div>
         </section>
 
@@ -715,12 +719,13 @@ const TaxonomyGrid = () => (
   </div>
 );
 
-const ChartWidget = () => (
+// 🟢 FIX: O ChartWidget agora recebe 'data' dinâmico
+const ChartWidget = ({ data }) => (
   <div className="bg-[#0b1121] border border-white/5 rounded-2xl p-6 h-[320px] flex flex-col relative overflow-hidden">
     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 to-indigo-600" />
     <h3 className="text-base font-bold text-gray-400 uppercase tracking-widest mb-6">Eficiência Predita de Captação</h3>
     <ResponsiveContainer width="100%" height="100%">
-      <AreaChart data={mockChartData}>
+      <AreaChart data={data}>
         <defs>
           <linearGradient id="colorOmni" x1="0" y1="0" x2="0" y2="1">
             <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.5}/>
