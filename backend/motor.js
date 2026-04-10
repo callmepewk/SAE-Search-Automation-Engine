@@ -835,7 +835,7 @@ for (const [categoryKey, categoryData] of Object.entries(KEYWORDS)) {
     const categoryName = categoryKey.split('_')[0].toUpperCase();
     const languageCode = categoryKey.split('_')[1];
     
-    let conceptIndex = 0; // 🟢 NOVO: Rastreador de conceito paralelo
+    let conceptIndex = 0; // Rastreador de conceito paralelo
 
     for (const [mainTerm, synonyms] of Object.entries(categoryData)) {
         const seed = hashString(mainTerm);
@@ -843,18 +843,21 @@ for (const [categoryKey, categoryData] of Object.entries(KEYWORDS)) {
         const cpc = (seed % 40) + 2;
         const ticket = 500 + (seed % 6000);
 
+        // 🟢 FIX DE BLINDAGEM: Garante que os sinônimos sempre sejam um Array, mesmo se houver erro de digitação na base
+        const safeSynonyms = Array.isArray(synonyms) ? synonyms : (typeof synonyms === 'string' ? [synonyms] : []);
+
         keywordsDB.push({
-            term: mainTerm.toLowerCase(),
-            synonyms: synonyms.map(s => s.toLowerCase()),
+            term: String(mainTerm).toLowerCase(),
+            synonyms: safeSynonyms.map(s => String(s).toLowerCase()),
             category: categoryName,
             language: languageCode,
-            conceptIndex: conceptIndex, // 🟢 NOVO: Salva o ID paralelo
+            conceptIndex: conceptIndex, 
             volume,
             cpc,
             ticket
         });
         
-        conceptIndex++; // Incrementa para o próximo termo
+        conceptIndex++; 
     }
 }
 console.log(`✅ Base pronta: ${keywordsDB.length} entidades macro mapeadas em 8 idiomas.`);
