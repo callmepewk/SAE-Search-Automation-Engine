@@ -7,6 +7,16 @@ const PORT = process.env.PORT || 3000;
 app.use(cors({ origin: '*' }));
 app.use(express.json());
 
+// Rota Raiz (Health Check)
+app.get('/', (req, res) => {
+    res.json({ 
+        status: "🟢 Motor SAE OMNI Online e Operante", 
+        version: "1.0.0",
+        message: "Acesso direto bloqueado. Utilize os endpoints da API.",
+        endpoints: ["GET /api/radar", "POST /api/dossie"]
+    });
+});
+
 // ==========================================
 // 📚 O DICIONÁRIO GLOBAL DO RABI (Escala Planetária - V33)
 // ==========================================
