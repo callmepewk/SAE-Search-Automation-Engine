@@ -1,843 +1,1060 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Search, Bell, Globe, Activity, Crosshair, TrendingUp, 
-  DollarSign, Zap, BarChart3, Database, ShieldCheck,
-  Loader2, Download, X, SlidersHorizontal, Check, AlertTriangle,
-  MessageSquare, Target, Lightbulb, AlertCircle, MapPin, 
-  ChevronDown, Flame, Snowflake, ArrowUpRight
-} from 'lucide-react';
-import { 
-  AreaChart, Area, ResponsiveContainer, Tooltip
-} from 'recharts';
+const express = require('express');
+const cors = require('cors');
 
-// --- BASE DE INTELIGÊNCIA OMNI (Autocomplete & Filtros) ---
-const filterCategories = {
-  'Tratamentos & Procedimentos': ['Toxina Botulínica', 'Preenchimento', 'Bioestimulador', 'Fios de PDO', 'Peeling Químico'],
-  'Lasers & Tecnologias': ['Ultraformer MPT', 'Lavieen', 'Fotona', 'PicoSure', 'Soprano Titanium'],
-  'Anatomia Sniper': ['Terço Superior', 'Olheiras', 'Malar', 'Contorno Mandibular', 'Pescoço', 'Glúteos'],
-  'Perfil da Clínica': ['Estética Básica', 'Estética Avançada', 'Dermatologia', 'Clínica Premium'],
-  'Região de Atuação': ['São Paulo', 'Rio de Janeiro', 'Sul', 'Nordeste', 'Brasil (Geral)'],
-  'Público-Alvo': ['Classe A/B', 'Classe C', '25-35 anos', '35-50 anos', 'Feminino', 'Masculino'],
-  'Objetivo Estratégico': ['Aumentar Faturamento', 'Lançar Procedimento', 'Encontrar Oportunidade', 'Dominar Concorrência'],
-  'Ticket Médio Alvo': ['Até R$ 1.000', 'R$ 1.000 a R$ 3.000', 'Acima de R$ 3.000']
-};
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-const autocompleteDatabase = [
-  { term: 'Toxina Botulínica', cat: 'Procedimento' }, { term: 'Preenchimento Labial', cat: 'Procedimento' },
-  { term: 'Bioestimulador de Colágeno', cat: 'Tratamento' }, { term: 'Fios de PDO', cat: 'Procedimento' },
-  { term: 'Ultraformer MPT', cat: 'Laser' }, { term: 'Lavieen', cat: 'Laser' },
-  { term: 'Fotona 4D', cat: 'Laser' }, { term: 'Morpheus8', cat: 'Radiofrequência' },
-  { term: 'Terço Superior', cat: 'Anatomia' }, { term: 'Contorno Mandibular', cat: 'Anatomia' },
-  { term: 'Papada', cat: 'Anatomia' }, { term: 'Melasma', cat: 'Tratamento' },
-  { term: 'Flacidez Facial', cat: 'Tratamento' }, { term: 'Gordura Localizada', cat: 'Tratamento' }
-];
+app.use(cors({ origin: '*' }));
+app.use(express.json());
 
-// --- DADOS ESTRUTURAIS OMNI ---
-const performanceData = [
-  { metric: 'CPC Médio', before: 20.00, after: 5.00, textB: 'R$ 8 a R$ 20', textA: 'R$ 1.5 a R$ 5', impact: '-70%', color: 'text-green-400' },
-  { metric: 'Taxa de Conversão', before: 2, after: 12, textB: '1% a 3%', textA: '7% a 12%', impact: '+300%', color: 'text-cyan-400' },
-  { metric: 'CAC Final', before: 150, after: 55, textB: 'R$ 150,00', textA: 'R$ 55,00', impact: 'Economia Real', color: 'text-indigo-400' },
-];
+// ==========================================
+// 📚 O DICIONÁRIO GLOBAL DO RABI (Escala Planetária - V33)
+// ==========================================
+const KEYWORDS = {
+  // 🇧🇷 PORTUGUÊS (Brasil/Portugal)
+procedimentos_pt: {
+    // --- 💉 ERA DOS INJETÁVEIS E BIOESTIMULADORES ---
+    'toxina botulínica': ['botox', 'toxina botulinica', 'botox facial', 'dysport', 'xeomin', 'nabota', 'botulift'],
+    'preenchimento hialurônico': ['ácido hialurônico', 'preenchimento facial', 'juvederm', 'restylane', 'rennova'],
+    'bioestimulador plla': ['sculptra', 'ácido poli-l-láctico', 'elleva', 'aesthefill', 'lanafill'],
+    'bioestimulador hidroxiapatita': ['radiesse', 'hidroxiapatita de cálcio', 'diamond bioestimulador'],
+    'bioestimulador híbrido': ['ellansé', 'polycaprolactone', 'harmonyca'],
+    'skinbooster': ['skin booster', 'hidratação injetável', 'restylane vital', 'volite'],
+    'bioremodelador tecidual': ['profhilo', 'bioremodelação', 'biorevitalização'],
+    'pdrn': ['pdrn', 'polinucleotídeos', 'esperma de salmão estética', 'nucleofill'],
+    'exossomos': ['exossomos', 'exosomes', 'terapia de exossomos', 'asce plus'],
+    'mesoterapia facial': ['mesolift', 'intradermoterapia facial', 'nctf 135ha'],
+    'mesoterapia corporal': ['enzimas para gordura', 'lipo enzimática', 'intradermoterapia corporal'],
+    'hidrolipo enzimática': ['hidrolipo não cirúrgica', 'aplicação para gordura localizada'],
+    'peim': ['procedimento estético injetável em microvasos', 'aplicação de vasinhos'],
+    'escleroterapia': ['escleroterapia convencional', 'escleroterapia com espuma'],
+    'fios de pdo liso': ['fios de pdo', 'polidioxanona', 'fios de estímulo de colágeno'],
+    'fios de sustentação': ['fios de tração', 'fio espiculado', 'silhouette soft', 'fios italianos'],
+    'hialuronidase': ['remoção de preenchimento', 'reversão de ácido hialurônico'],
+    'rinomodelação': ['bioplastia de nariz', 'preenchimento de nariz'],
+    'preenchimento labial': ['aumento de lábios', 'contorno labial', 'gloss lips'],
+    'preenchimento de mandíbula': ['contorno mandibular', 'definição de mandíbula'],
+    'preenchimento de malar': ['top model look', 'maçãs do rosto'],
+    'preenchimento de mento': ['projeção de queixo', 'mentoplastia injetável'],
+    'preenchimento de olheiras': ['tratamento de olheira profunda', 'calha lacrimal'],
+    'preenchimento de têmporas': ['arqueamento de sobrancelha com preenchimento'],
+    'preenchimento de glúteos': ['bioplastia de bumbum', 'volume glúteo injetável'],
+    'bioestimulador de glúteos': ['sculptra glúteo', 'radiesse glúteo', 'bumbum up'],
 
-const taxonomyData = [
-  { title: 'Procedimentos', count: '350+', desc: 'Oferta: O que as clínicas tentam vender.', icon: BarChart3 },
-  { title: 'Tratamentos', count: '920+', desc: 'Demanda: A dor que tira o sono do cliente.', icon: Activity },
-  { title: 'Anatomia Sniper', count: '450+', desc: 'Precisão: Onde o ajuste milimétrico é desejado.', icon: Crosshair },
-  { title: 'Comercial/Intenção', count: '200+', desc: 'Conversão: O momento exato de compra.', icon: DollarSign },
-  { title: 'Lasers e Marcas', count: '550+', desc: 'Tech-War: A guerra de fabricantes.', icon: Zap },
-  { title: 'B2B & Cosmecêuticos', count: '960+', desc: 'Share of Pocket: Para onde o dinheiro foge.', icon: Database },
-];
 
-const mockChartData = [{ v: 20 }, { v: 45 }, { v: 35 }, { v: 80 }, { v: 65 }, { v: 100 }];
+// --- ⚡ LASERS E DISPOSITIVOS DE ENERGIA (EBDs) GLOBAL DOMINATION ---
+    
+    // 🔴 ABLATIVOS E CORTANTES
+    'laser co2 fracionado': ['laser co2', 'co2 fracionado', 'dual deep', 'resurfacing co2', 'acupulse', 'ultrapulse', 'smartxide', 'smartxide dot', 'eco2', 'fraxis', 'edge one', 'dermal optical thermolysis', 'laser 10600nm', 'fraxel repair', 'cortex', 'pixel co2'],
+    'laser erbium yag': ['fotona 4d', 'erbium 2940', 'resurfacing ablativo', 'dermablate', 'mcl31', 'action ii', 'contour trl', 'juliet', 'burane', 'etherea dualmode', 'profrac', 'laser 2940nm'],
+    
+    // 🟡 NÃO ABLATIVOS E FRACIONADOS
+    'laser erbium glass': ['fraxel', 'resurfx', 'laser 1550nm', 'laser não ablativo', 'sellas 1550', 'mosaic', 'frax 1550', 'lux1540', 'palomar 1540'],
+    'laser nd yap': ['prodeep', 'laser 1340nm', 'etherea 1340', 'rejuvenescimento capilar 1340'],
+    'laser thulium': ['lavieen', 'bb laser', 'lasemd', 'lasemd ultra', 'laser de lavagem', 'pele de porcelana', 'moxi', 'fraxel dual 1927', 'frax 1940', 'laser 1927nm', 'laser de tulio', 'thulium laser'],
+    
+    // 💥 PICOSSEGUNDOS (PICO)
+    'laser picossegundos': ['picosure', 'picoway', 'discovery pico', 'laser picossegundos', 'pico laser', 'picoplus', 'picocare', 'starwalker pqx', 'pico genesis', 'enlighten', 'pico clear', 'picosure pro'],
+    
+    // 🖤 Q-SWITCHED (NANOSSEGUNDOS)
+    'laser q-switched': ['acroma', 'spectra', 'vektra', 'hollywood peel', 'black peel', 'medlite c6', 'revlite si', 'starwalker maqx', 'pastelle', 'helios iii', 'lucid q-ptp', 'laser toning', 'spectra xt', 'hollywood spectra', 'q-switched nd yag'],
+    
+    // 🩸 VASCULAR E DEPILAÇÃO (LONG PULSE & COLORIDOS)
+    'laser nd yag': ['nd yag 1064nm', 'zye vascular', 'laser para telangiectasia', 'excel v', 'gentleyag', 'aerolase neo', 'clarity ii', 'fotona nd yag', 'nd yag pulso longo', 'genesis laser'],
+    'laser vascular vbeam': ['vbeam perfecta', 'vbeam prima', 'dye laser', 'laser para rosácea', 'pulsed dye laser', 'pdl', 'cynergy'],
+    'laser ktp e amarelo': ['laser 532nm', 'laser 577nm', 'laser para manchas vasculares', 'quadrostar proyellow', 'dermav', 'advatx', 'laser amarelo', 'excel v ktp'],
+    'laser alexandrite': ['depilação alexandrite', 'gentlelase', 'apogee', 'clarity alexandrite', 'splendor x', 'motus ax', 'elite iq', 'epicarea', 'laser 755nm'],
+    'laser de diodo': ['depilação a laser diodo', 'lightsheer', 'lightsheer duet', 'lightsheer desire', 'soprano titanium', 'soprano ice', 'soprano platinum', 'vectus', 'milesman', 'mediostar', 'crystal 3d', 'galaxy fiber'],
+    'laser rubi': ['laser 694nm', 'remoção de tatuagem rubi', 'sinon', 'tatoostar', 'ruby star', 'q-clear'],
+    
+    // 🌈 LUZ INTENSA PULSADA (BBL / IPL)
+    'luz intensa pulsada': ['ipl', 'luz pulsada', 'lumecca', 'bbl hero', 'etherea ipl', 'm22', 'stellar m22', 'nordlys', 'icon ipl', 'venus versa', 'lyra ipl', 'maxg', 'broadband light', 'limelight'],
+    
+    // 🔊 ULTRASSOM (HIFU / SUPERB)
+    'ultrassom microfocado': ['ultraformer', 'ultraformer 3', 'ultraformer iii', 'ultraformer mpt', 'ultherapy', 'liftera', 'hifu', 'accutyte', 'doublo', 'utims', 'v-max', 'hipro', 'sofwave', 'superb technology'],
+    'ultrassom macrofocado': ['scizer', 'liposonix', 'quebra de gordura por ultrassom', 'ultrafocus', 'hifu corporal'],
+    
+    // ⚡ RADIOFREQUÊNCIA (AGULHADA E INJETÁVEL)
+    'radiofrequência microagulhada': ['morpheus8', 'potenza', 'agnis', 'scarlet rf', 'secret rf', 'sylfirm x', 'endymed intensif', 'vivace', 'genius rf', 'intracel', 'infinit rf', 'voluderm'],
+    'radiofrequência subdérmica': ['profound rf', 'facetite', 'bodytite', 'accutite', 'agnes rf', 'thermitight', 'thermirf'],
+    
+    // 🌡️ RADIOFREQUÊNCIA (NÃO INVASIVA)
+    'radiofrequência convencional': ['hertix', 'freeze', 'vênus legacy', 'accent prime', 'thermage', 'thermage flx', 'exilis ultra 360', 'trusculpt', 'nuera tight', 'forma', 'vela shape', 'vanquish me', 'tripollar', 'evoke'],
+    'radiofrequência fracionada ablacao': ['fraxx', 'wavetronic', 'sublative rf', 'emmatrix', 'venus viva'],
+    
+    // ❄️ CRIOTERAPIA
+    'criolipólise de sucção': ['coolsculpting', 'coolsculpting elite', 'clatuu alpha', 'cristal cryolipolysis', 'zeltiq', 'cooltech', 'congelamento de gordura'],
+    'criolipólise de placas': ['criodermis', 'asgard vc10', 'coolplas', 'criolipolise sem sucção'],
+    
+    // 🌊 CHOQUE E CAMPO MAGNÉTICO
+    'ondas de choque': ['thork', 'x-wave', 'zwave', 'cellutone', 'ondas acústicas para celulite', 'd-actor'],
+    'campo eletromagnético': ['emsculpt neo', 'cmslim', 'estimulação muscular', 'cooltone', 'tesla former', 'trusculpt flex', 'zeta', 'z-field'],
+    
+    // ⚡ PLASMA E OUTROS
+    'jato de plasma': ['plasma pen', 'eletrocautério estético', 'plasma fibroblast', 'plexr', 'neogen', 'plasmage', 'opus plasma', 'jett plasma'],
+    'eletrolifting': ['galvanopuntura', 'tratamento de rugas com corrente'],
+    'carboxiterapia': ['carbox corporal', 'carbox facial', 'infusão de co2'],
+    'ozonioterapia estética': ['ozônio para gordura', 'ozônio para celulite'],
+    'hidradermabrasão': ['hydrafacial', 'aquapure', 'peeling de água', 'dermaclear'],
+    'microdermoabrasão': ['peeling de diamante', 'peeling de cristal'],
+    'ledterapia': ['fotobiomodulação', 'máscara de led', 'luz azul acne', 'healite'],
+    'endermologia': ['lpg', 'vacuoterapia', 'massageador a vácuo', 'vela shape 3'],
+    'pressoterapia': ['drenagem pneumática', 'botas de compressão'],
 
-// --- FALLBACK DO LIVE RADAR (Prevenção de Tela Vazia) ---
-const fallbackRadarData = [
-  { termo_chave: 'Bioestimulador Glúteos', mercado: 'Tratamentos Corporais', evolucao: 145.2, status_tendencia: 'EXPLOSÃO (TRENDING)' },
-  { termo_chave: 'Lavieen Rosto Todo', mercado: 'Lasers Nacionais', evolucao: 85.4, status_tendencia: 'ASCENSÃO SÓLIDA' },
-  { termo_chave: 'Lipo Enzimática Papada', mercado: 'Injetáveis', evolucao: -12.5, status_tendencia: 'RESFRIAMENTO (QUEDA)' },
-  { termo_chave: 'Ultraformer MPT Olhos', mercado: 'HIFU', evolucao: 22.1, status_tendencia: 'ALTO RISCO DE SATURAÇÃO' }
-];
+  // --- 🔪 CIRURGIA PLÁSTICA, ALTA DEFINIÇÃO E CIRURGIAS A LASER ---
+    
+    // 🪚 CONTORNO CORPORAL E LIPOASPIRAÇÃO (CLÁSSICA E A LASER)
+    'lipoaspiração hd': ['lipo de alta definição', 'lipo lad', 'lipo vlaser', 'lipoescultura hd', 'ugraft'],
+    'lipoaspiração convencional': ['vibrolipo', 'hidrolipo com corte', 'minilipo'],
+    'lipoaspiração a laser': ['laserlipólise', 'lipo a laser', 'smartlipo', 'slimlipo', 'fotona tightsculpting', 'lipo laser'],
+    'retração de pele a plasma': ['renuvion', 'j-plasma', 'argoplasma', 'retração de pele pós lipo', 'plasma de hélio'],
+    'radiofrequência subdérmica cirúrgica': ['bodytite', 'facetite', 'necktite', 'accutite', 'lipo com radiofrequência'],
+    'abdominoplastia': ['dermolipectomia', 'mini abdominoplastia', 'abdominoplastia a laser'],
 
-// --- SISTEMA DE CONTROLE DE USO (CTO GOD MODE) ---
-const DAILY_LIMIT = 100;
+    // 🍈 MAMAS
+    'mamoplastia de aumento': ['prótese de silicone', 'implante de mama', 'silicone recuperação rápida', 'r24r'],
+    'mamoplastia redutora': ['redução de mama', 'mastopexia', 'mastopexia com alça muscular', 'mastopexia a laser', 'lifting de mama sem corte'],
+    'explante de silicone': ['remoção de prótese', 'doença do silicone', 'cápsula do silicone'],
+    
+    // 👁️ OLHOS E TERÇO SUPERIOR
+    'blefaroplastia superior': ['cirurgia de pálpebras', 'olhar cansado', 'excesso de pele nos olhos'],
+    'blefaroplastia inferior': ['bolsas nos olhos', 'olheira cirúrgica'],
+    'blefaroplastia a laser': ['blefaro a laser', 'cirurgia de pálpebra a laser', 'corte a laser pálpebra', 'blefaroplastia sem corte', 'plexr pálpebra', 'madonna lift'],
+    'brow lift': ['lifting de sobrancelha', 'castanhares', 'brow lift a laser', 'endoscopia de sobrancelha'],
+    
+    // 🎭 FACE E PESCOÇO (LIFTING E ENDOLASER)
+    'facelift': ['ritidoplastia', 'lifting facial cirúrgico', 'minilifting'],
+    'deep plane facelift': ['lifting facial profundo', 'rejuvenescimento cirúrgico total', 'smas facelift'],
+    'endolaser facial': ['endolift', 'laser endovenoso facial', 'laser subcutâneo', 'lifting a laser', 'fio de laser', 'fotona smooth facial', 'endolight'],
+    'lipo de papada cirúrgica': ['lipoaspiração de submento', 'lipo de queixo'],
+    'lipo de papada a laser': ['endolaser de papada', 'lipo laser submento', 'endolift papada', 'emagrecimento facial a laser'],
+    'bichectomia': ['remoção da bola de bichat', 'afinar o rosto', 'bichectomia a laser'],
+    
+    // 👃 NARIZ, ORELHA E MENTO
+    'rinoplastia': ['cirurgia de nariz', 'rinoplastia estruturada', 'rinoplastia ultrassônica', 'piezo rinoplastia'],
+    'rinoplastia a laser': ['afinamento de nariz a laser', 'rinomodelação fotona', 'laser no nariz'],
+    'otoplastia': ['cirurgia de orelha de abano', 'otoplastia a laser', 'otoplastia sem corte', 'earshut'],
+    'mentoplastia': ['cirurgia de queixo', 'prótese de mento', 'avanço de mento'],
+    'lobuloplastia': ['correção de orelha rasgada', 'costurar lóbulo'],
+    
+    // 🍑 GLÚTEOS
+    'gluteoplastia': ['prótese de glúteo', 'enxerto de gordura no bumbum', 'brazilian butt lift', 'bbl cirurgia'],
+    'endolaser corporal': ['endolift glúteo', 'retração de celulite a laser', 'subcisão a laser para celulite', 'cellulaze'],
+    
+    // 🌸 CIRURGIA ÍNTIMA
+    'ninfoplastia': ['labioplastia cirúrgica', 'redução de pequenos lábios'],
+    'ninfoplastia a laser': ['cirurgia íntima a laser', 'labioplastia a laser', 'corte a laser região íntima'],
+    'rejuvenescimento íntimo a laser': ['monalisa touch', 'laser vaginal', 'fotona íntimo', 'estreitamento vaginal a laser', 'laser de co2 íntimo', 'atrófia vaginal a laser'],
+    
+    // 🩸 VASCULAR CIRÚRGICO E HIPERIDROSE
+    'cirurgia vascular a laser': ['endolaser varizes', 'evlt', 'ablação venosa a laser', 'cirurgia de varizes a laser', 'secagem de varizes a laser'],
+    'tratamento de hiperidrose a laser': ['lipoaspiração axilar a laser', 'remoção de glândulas de suor a laser', 'miradry'],
 
-const checkDailyLimit = () => {
-  const today = new Date().toDateString();
-  const usage = JSON.parse(localStorage.getItem('sae_usage')) || { date: today, count: 0 };
-  if (usage.date !== today) { usage.count = 0; usage.date = today; }
-  return usage;
-};
+    // --- 💇 CAPILAR E TRICOLOGIA ---
+    'transplante capilar fue': ['implante capilar sem cicatriz'],
+    'transplante capilar fut': ['transplante de tira capilar'],
+    'mmp capilar': ['microinfusão de medicamentos na pele', 'mesoterapia capilar'],
+    'microagulhamento capilar': ['dermaroller no couro cabeludo'],
+    'rigenera': ['regeneração capilar por células tronco'],
+    'led capilar': ['capacete de led', 'laser de baixa potência para queda'],
 
-const incrementUsage = (usage) => {
-  usage.count += 1;
-  localStorage.setItem('sae_usage', JSON.stringify(usage));
-};
+    // --- 🌿 ESTÉTICA AVANÇADA E COMPLEMENTAR ---
+    'limpeza de pele': ['limpeza profunda', 'extração de cravos'],
+    'peeling de fenol': ['fenol profundo', 'fenol localizado'],
+    'peeling químico médio': ['peeling de tca', 'peeling de ata'],
+    'peeling químico superficial': ['peeling de glicólico', 'peeling de mandélico', 'peeling de retinoico'],
+    'dermaplaning': ['raspagem facial com lâmina'],
+    'microagulhamento ipca': ['indução percutânea de colágeno'],
+    'drenagem linfática': ['drenagem pós operatório', 'método renata frança'],
+    'massagem modeladora': ['massagem redutora', 'lipo massagem'],
+    'liberação miofascial': ['massagem para tecidos profundos'],
+    'maderoterapia': ['terapia com madeira', 'massagem com pantalas'],
+    'terapia neural': ['tratamento regenerativo dor e estética'],
+    'soroterapia': ['iv therapy', 'soro da beleza', 'vitamina na veia'],
+    'bb glow': ['camuflagem de pele', 'efeito base'],
+    'micropigmentação de sobrancelha': ['microblading', 'fio a fio'],
+    'micropigmentação labial': ['lip tint semipermanente'],
+    'micropigmentação capilar': ['camuflagem de calvície'],
+    'camuflagem de estrias': ['tatuagem para estrias'],
 
-// --- COMPONENTE: SMART SEARCH BAR E GEOLOCALIZAÇÃO ---
-const SmartSearchBar = ({ onSearch, isSearching }) => {
-  const [query, setQuery] = useState('');
-  const [suggestions, setSuggestions] = useState([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
-  const [selectedFilters, setSelectedFilters] = useState([]);
+    "ajuste_de_modiolo": ['modíolo', 'canto da boca caído', 'músculo risório', 'rugas de expressão no modíolo'],
+    'escultura de arco do cupido': ['arco do cupido', 'v do lábio', 'filtro labial', 'definição de arco do cupido'],
+    'preenchimento de tubérculo labial': ['tubérculo central', 'volume no centro do lábio', 'lábio de boneca'],
+    'arqueamento de cauda de sobrancelha': ['cauda da sobrancelha', 'sobrancelha caída', 'fox eyes ponta'],
+    'estética de lóbulo de orelha': ['lóbulo da orelha murcho', 'orelha rasgada', 'preenchimento de lóbulo', 'rejuvenescimento de orelha'],
+    'correção de sulco labiomentoniano': ['sulco labiomentoniano', 'vinco abaixo do lábio', 'queixo dividido'],
+    'suporte de goteira lacrimal': ['goteira lacrimal', 'canal lacrimal', 'vale lacrimal', 'olheira profunda interna'],
+    'projeção de eminência malar': ['eminência malar', 'osso da bochecha', 'malar superior', 'malar lateral'],
+    'definição de ângulo da mandíbula': ['ângulo da mandíbula', 'goníaco', 'ramo da mandíbula', 'mandíbula quadrada'],
+    'trabalho de músculo platisma': ['bandas platismais', 'cordas no pescoço', 'músculo do pescoço', 'neck lifting nefertiti'],
+    'preenchimento de fossa temporal': ['têmporas fundas', 'fossa temporal', 'rosto cadavérico', 'lateral da testa'],
+
+    // --- 🎯 ANATOMIA SNIPER (MICRO-SEGMENTAÇÃO CORPORAL) ---
+    'gordura pré-axilar': ['gordura axilar', 'gordura perto da mama', 'gordura que sai no sutiã', 'prega axilar'],
+    'estética de dorso das mãos': ['mãos envelhecidas', 'veias saltadas na mão', 'dorso da mão murcho', 'manchas nas mãos'],
+    'definição de linha alba': ['linha alba', 'entrada da barriga', 'definição abdominal central', 'six pack'],
+    'tratamento de gordura infraumbilical': ['gordura abaixo do umbigo', 'pochete', 'abdômen inferior'],
+    'escultura de crista ilíaca': ['crista ilíaca', 'osso do quadril', 'v da barriga', 'flanco inferior'],
+    'gordura suprapatelar': ['gordura no joelho', 'acima do joelho', 'joelho gordo', 'flacidez no joelho'],
+    'fossa supraclavicular': ['saboneteira', 'osso da saboneteira murcho', 'preenchimento de saboneteira'],
+    'bananinha glútea': ['gordura embaixo do bumbum', 'dobra glútea inferior', 'bananinha'],
+    'interno de braço': ['tchauzinho', 'face interna do braço', 'flacidez braquial'],
+    'monte de vênus': ['gordura pubiana', 'monte de vênus proeminente', 'estética do púbis'],
+    'região sacra': ['gordura no final das costas', 'região lombar baixa', 'covinha das costas'],
+    'fossa poplítea': ['atrás do joelho', 'retenção atrás do joelho', 'circulação poplítea'],
+    'tendão de aquiles estético': ['tornozelo grosso', 'definição de tornozelo', 'gordura no calcanhar'],
+
+    // --- 🎯 SEGMENTAÇÃO DE TERÇOS E PLANOS ---
+    'terço médio facial': ['maçã do rosto', 'sustentação facial central', 'reestruturação de terço médio'],
+    'terço inferior facial': ['contorno de rosto baixo', 'mandíbula e queixo', 'linha do bumbum facial'],
+    'terço superior facial': ['testa e olhos', 'olhar cansado', 'arqueamento total'],
+    'plano profundo (deep plane)': ['deep plane', 'camada smas', 'reposicionamento muscular', 'estética profunda']
+
+  },
+
+   tratamentos_pt: {
+    // --- 🎭 ENVELHECIMENTO FACIAL (LINHAS E RUGAS) ---
+    'rugas na testa': ['rugas na testa', 'linhas na testa', 'rugas frontais', 'testa franzida'],
+    'glabela': ['rugas entre as sobrancelhas', 'bravo', 'cara de brava', 'vinco na glabela'],
+    'pés de galinha': ['rugas ao redor dos olhos', 'rugas orbiculares', 'pés de galinha'],
+    'rugas infraorbitais': ['rugas embaixo dos olhos', 'linhas finas nos olhos'],
+    'código de barras': ['rugas acima da boca', 'rugas periorais', 'rugas de fumante'],
+    'bigode chinês': ['sulco nasogeniano', 'dobra do nariz à boca', 'bigode chines'],
+    'linhas de marionete': ['rugas de marionete', 'canto da boca caído', 'linhas de tristeza'],
+    'rugas no pescoço': ['colar de vênus', 'linhas no pescoço', 'pescoço enrugado'],
+    'rugas no colo': ['rugas no decote', 'sleep lines', 'amassado no colo'],
+    'linhas de expressão': ['linhas finas', 'primeiras rugas', 'prevenção de rugas'],
+
+    // --- 📐 FLACIDEZ E CONTORNO (FACIAL) ---
+    'flacidez facial': ['rosto derretido', 'pele do rosto caída', 'perda de firmeza facial'],
+    'bochecha de buldogue': ['jowls', 'bochecha caída', 'perda do contorno da mandíbula'],
+    'papada': ['queixo duplo', 'gordura no submento', 'papada de gordura', 'papada de pele'],
+    'olheiras profundas': ['olheira funda', 'sulco lacrimal', 'olho encovado'],
+    'olheiras escuras': ['olheira roxa', 'olheira pigmentada', 'olheira marrom'],
+    'bolsas nos olhos': ['bolsa de gordura nos olhos', 'olhos inchados'],
+    'pálpebra caída': ['flacidez de pálpebra', 'excesso de pele nos olhos', 'ptose palpebral'],
+    'perda de volume facial': ['rosto murcho', 'maçã do rosto caída', 'perda de gordura facial'],
+
+    // --- ☁️ MANCHAS E PIGMENTAÇÃO ---
+    'melasma': ['melasma resistente', 'mancha de gravidez', 'hiperpigmentação facial'],
+    'sardas': ['efélides', 'sardas no rosto', 'manchas de sardas'],
+    'manchas de sol': ['lentigo solar', 'manchas senis', 'manchas de sol na mão'],
+    'manchas pós acne': ['mancha vermelha de espinha', 'mancha escura de acne'],
+    'hiperpigmentação pós inflamatória': ['mancha após ferida', 'mancha de queimadura'],
+    'ceratose actínica': ['manchas ásperas de sol', 'lesões pré-cancerosas solares'],
+    'vitiligo estético': ['manchas brancas na pele', 'perda de pigmento'],
+
+    // --- 🌋 ACNE E TEXTURA DA PELE ---
+    'acne ativa': ['espinhas inflamadas', 'acne vulgar', 'espinha interna', 'cravos e espinhas'],
+    'acne adulta': ['acne mulher adulta', 'acne hormonal'],
+    'cicatrizes de acne': ['marcas de espinha', 'buracos no rosto', 'pele de laranja acne'],
+    'poros dilatados': ['poros abertos', 'poros sujos', 'como fechar os poros'],
+    'pele oleosa': ['brilho excessivo no rosto', 'oleosidade no nariz', 'pele sebosa'],
+    'pele seca': ['pele descamando', 'pele ressecada', 'pele esticando'],
+    'pele sensível': ['rosácea', 'couperose', 'pele avermelhada', 'sensibilidade facial'],
+    'textura irregular': ['pele áspera', 'relevo da pele ruim', 'pele sem brilho'],
+    'milium': ['pontinhos brancos no rosto', 'bolinhas de queratina'],
+    'queratose pilar': ['bolinhas no braço', 'pele de galinha'],
+
+    // --- ⚖️ GORDURA LOCALIZADA E MEDIDAS ---
+    'gordura abdominal': ['gordura na barriga', 'estômago alto', 'pneu na barriga'],
+    'flancos': ['pneuzinhos laterais', 'gordura na cintura'],
+    'gordura nas costas': ['gordura do sutiã', 'dobras nas costas'],
+    'gordura no braço': ['gordura do tchauzinho', 'braço gordo'],
+    'gordura nas coxas': ['gordura no interno de coxa', 'coxas grossas'],
+    'gordura no joelho': ['gordura acima do joelho'],
+    'bananinha': ['gordura embaixo do bumbum', 'bananinha glútea'],
+    'culote': ['gordura no culote', 'lateral da coxa'],
+    'gordura axilar': ['gordura perto da axila', 'gordura do peito'],
+
+    // --- 🍊 CELULITE E FLACIDEZ CORPORAL ---
+    'celulite': ['furinhos na pele', 'aspecto casca de laranja', 'fibrose de celulite'],
+    'celulite infectada': ['lipedema', 'dor na gordura', 'celulite dolorida'],
+    'flacidez corporal': ['pele solta no corpo', 'flacidez de braço', 'flacidez pós parto'],
+    'umbigo triste': ['flacidez em cima do umbigo', 'pele rugosa na barriga'],
+    'estrias brancas': ['estrias antigas', 'estrias largas'],
+    'estrias vermelhas': ['estrias novas', 'estrias de gravidez'],
+
+    // --- 💉 VASCULAR E CIRCULAÇÃO ---
+    'vasinhos no rosto': ['veias finas no rosto', 'vasos no nariz'],
+    'vasinhos nas pernas': ['telangiectasias', 'aranhas vasculares', 'microvarizes'],
+    'retenção de líquidos': ['inchaço nas pernas', 'edema', 'corpo inchado'],
+    'rosácea': ['rosto sempre vermelho', 'vasos de rosácea'],
+
+    // --- 💇 CAPILAR E COURO CABELUDO ---
+    'calvície masculina': ['alopecia androgenética', 'entradas no cabelo', 'careca'],
+    'queda de cabelo feminina': ['cabelo ralo', 'perda de volume capilar', 'eclúvio telógeno'],
+    'falha na barba': ['barba rala', 'buracos na barba'],
+    'caspa': ['seborreia', 'couro cabeludo descamando', 'coceira na cabeça'],
+    'cabelo quebradiço': ['fios fracos', 'cabelo que não cresce'],
+
+    // --- 👙 ESTÉTICA ÍNTIMA ---
+    'escurecimento íntimo': ['virilha escura', 'manchas na região íntima'],
+    'flacidez íntima': ['grandes lábios murchos', 'frouxidão vaginal'],
+    'ressecamento vaginal': ['atrofia vaginal', 'dor na relação estético'],
+
+    // --- 🚑 CICATRIZES E OUTROS ---
+    'cicatriz cirúrgica': ['cicatriz de cesárea', 'cicatriz de abdominoplastia', 'quelóide'],
+    'cicatriz de queimadura': ['marca de queimadura na pele'],
+    'hiperidrose': ['suor excessivo nas axilas', 'suor nas mãos'],
+    'tatuagem indesejada': ['remover tatuagem', 'apagar micropigmentação'],
+    'remoção de verrugas': ['acrocórdons', 'bolinhas de carne no pescoço'],
+
+    // --- 🎯 ESQUADRÃO SNIPER: QUEIXAS ANATÔMICAS MILIMÉTRICAS ---
+    "perda_de_arco_do_cupido": ['lábio sem definição', 'v do lábio sumindo', 'boca sem contorno'],
+    'lóbulo de orelha murcho': ['orelha enrugada', 'lóbulo fino', 'orelha que não segura brinco'],
+    'sulco labiomentoniano': ['vinco no queixo', 'queixo dividido', 'ruga abaixo do lábio'],
+    'fossa temporal funda': ['têmpora funda', 'rosto de caveira', 'emagrecimento facial excessivo'],
+    'gordura pré-axilar': ['gordura que pula do sutiã', 'gordura na frente da axila', 'dobra na axila'],
+    'mãos envelhecidas': ['veias saltadas nas mãos', 'mão de velha', 'dorso da mão sem volume'],
+    'fossa supraclavicular funda': ['saboneteira funda', 'osso do pescoço aparente'],
+    'gordura suprapatelar': ['gordura acima do joelho', 'joelho com pele sobrando'],
+    'bananinha glútea': ['gordura abaixo do bumbum', 'dobra dupla no bumbum'],
+    'monte de vênus proeminente': ['púbis inchado', 'gordura no monte de vênus'],
+    'flacidez de interno de coxa': ['coxa mole por dentro', 'pele sobrando nas pernas'],
+
+    // --- 🧬 CAMADA MOLECULAR: TRATAMENTOS POR ATIVOS (Skin-Intellectual) ---
+    'tratamento com ácido tranexâmico': ['tranexâmico para melasma', 'injeção para manchas'],
+    'estimulação com glutationa': ['clareamento com glutationa', 'antioxidante injetável'],
+    'rejuvenescimento com retinol': ['skincare com retinol', 'ácido retinóico rugas'],
+    'hidratação com niacinamida': ['vitamina b3 para pele', 'controle de poros niacinamida'],
+    'clareamento com cysteamine': ['cisteamina para melasma', 'creme para manchas fortes'],
+    'uso de hidroquinona': ['medo de hidroquinona', 'efeito rebote hidroquinona'],
+    'suplementação de colágeno verisol': ['colágeno que funciona', 'tomar colágeno para pele'],
+
+    // --- ⚠️ GESTÃO DO MEDO: COMPLICAÇÕES E RECUPERAÇÃO ---
+    'erro no preenchimento': ['boca torta', 'preenchimento com caroço', 'nódulo de ácido hialurônico'],
+    'efeito tyndall': ['preenchimento azulado', 'olheira azul após preencher'],
+    'ptose pós botox': ['pálpebra caída após botox', 'sobrancelha pesada botox'],
+    'edema persistente': ['rosto inchado que não desce', 'retenção após procedimento'],
+    'fibrose pós lipo': ['caroço após lipoaspiração', 'barriga irregular pós cirurgia'],
+    'efeito rebote laser': ['mancha que voltou pior', 'rosto queimado por laser'],
+    'necrose estética': ['mancha roxa após preenchimento', 'dor forte após injetável'],
+    'biofilme': ['infecção após preenchimento', 'inflamação tardia'],
+
+    // --- 🔥 GATILHOS EMOCIONAIS E GÍRIAS DE BUSCA ---
+    'rosto cansado': ['olhar de cansaço', 'cara de acabada', 'tirar o aspecto cansado'],
+    'rosto derretido': ['efeito bulldog', 'pele caindo', 'bochecha caída'],
+    'bumbum na nuca': ['levantar o bumbum', 'glúteo firme', 'projeto bumbum'],
+    'barriga negativa': ['abdômen definido', 'barriga sem dobra'],
+    'efeito filtro instagram': ['pele perfeita', 'rosto de porcelana', 'efeito photoshop real'],
+    'boca de pato': ['medo de boca de pato', 'preenchimento labial natural'],
+    'rosto de travesseiro': ['pillow face', 'excesso de preenchimento', 'rosto inchado de botox']
   
-  const [geoScope, setGeoScope] = useState(null); 
-  const [isGeoConfirmed, setIsGeoConfirmed] = useState(false);
-  const [showGeoPrompt, setShowGeoPrompt] = useState(false);
-  const searchRef = useRef(null);
+  },
+  anatomia_pt: {
+    // --- 👱‍♀️ FACE E MICRO-REGIÕES FACIAIS ---
+    'face_geral': ['face', 'rosto', 'facial', 'pele do rosto', 'contorno facial', 'harmonização facial', 'emagrecimento facial', 'rosto gordo', 'afinar o rosto', 'bichectomia'],
+    'terco_superior': ['testa', 'fronte', 'glabela', 'sobrancelha', 'têmporas', 'rosto encovado', 'têmpora funda'],
+    'regiao_periorbital': ['olhos', 'olheiras', 'pálpebras', 'pés de galinha', 'goteira lacrimal', 'bolsas embaixo dos olhos', 'olhar cansado', 'pálpebra caída'],
+    'terco_medio': ['maçã do rosto', 'malar', 'zigomático', 'bochechas', 'bochecha caída', 'bigode chinês', 'centro do rosto', 'top model look'],
+    'nariz': ['nariz', 'dorso nasal', 'ponta do nariz', 'nariz largo', 'nariz batata', 'aba nasal', 'rinomodelação', 'afinar nariz'],
+    'regiao_perioral_e_labios': ['boca', 'lábios', 'código de barras', 'arco do cupido', 'canto da boca', 'linhas de marionete', 'sorriso gengival', 'boca torta', 'lábio fino'],
+    'terco_inferior_e_mandibula': ['mandíbula', 'linha da mandíbula', 'maxilar', 'queixo', 'mento', 'bochecha de buldogue', 'jowls', 'contorno do queixo', 'queixo duplo', 'rosto quadrado', 'mandíbula marcada'],
 
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (searchRef.current && !searchRef.current.contains(event.target)) setShowSuggestions(false);
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    // --- 🧣 PESCOÇO, COLO E NUCA ---
+    'papada_e_submento': ['papada', 'submento', 'gordura submentoniana', 'queixo duplo', 'papo', 'gordura embaixo do queixo', 'pescoço gordo', 'lipo de papada', 'lipo de queixo'],
+    'pescoco': ['pescoço', 'rugas no pescoço', 'colar de vênus', 'flacidez no pescoço', 'pescoço de peru', 'bandas do platisma', 'cordas no pescoço'],
+    'colo': ['colo', 'decote', 'rugas no colo', 'marcas de dormir', 'sleep lines', 'manchas no peito', 'flacidez no decote', 'rejuvenescimento do colo'],
+    'nuca_e_cervical': ['nuca', 'gordura na nuca', 'cupim', 'giba', 'giba de búfalo', 'gordura cervical', 'dorso cervical'],
 
-  const handleInputChange = (e) => {
-    const val = e.target.value;
-    setQuery(val);
-    if (val.length > 1) {
-      const filtered = autocompleteDatabase.filter(item => item.term.toLowerCase().includes(val.toLowerCase()));
-      setSuggestions(filtered);
-      setShowSuggestions(true);
-    } else {
-      setShowSuggestions(false);
-    }
-  };
+    // --- 👙 TRONCO, ABDÔMEN E COSTAS ---
+    'abdomen_geral': ['abdômen', 'barriga', 'abdominal', 'gordura na barriga', 'flacidez abdominal', 'pós-gestação', 'definição abdominal', 'barriga chapada', 'emagrecer barriga', 'lipo', 'abdominoplastia', 'secagem de barriga'],
+    'abdomen_inferior': ['pochete', 'pé da barriga', 'gordura infraumbilical', 'barriguinha', 'gordura pélvica', 'gordurinha embaixo do umbigo', 'barriga avental', 'dobra na barriga'],
+    'abdomen_superior': ['estômago alto', 'gordura supraumbilical', 'dobra do estômago', 'barriga estufada'],
+    'umbigo': ['umbigo', 'umbigo triste', 'flacidez no umbigo', 'umbigo caído', 'sobra de pele no umbigo', 'umbigo de lipo'],
+    'flancos_e_cintura': ['flancos', 'pneuzinhos', 'gordura flancos', 'gordura lateral', 'cintura', 'afinar cintura', 'curva da cintura', 'gordura do cós da calça', 'cintura fina'],
+    'costas_e_lombar': ['costas', 'gordura nas costas', 'dobras nas costas', 'gordura do sutiã', 'dobrinha do sutiã', 'lombar', 'gordura sacral', 'flanco traseiro', 'pneu nas costas', 'costas largas'],
+    'mamas_e_axilas': ['peito', 'seios', 'mamas', 'gordura na axila', 'gordurinha do sutiã', 'prega axilar', 'gordura pré-axilar', 'gordura no suvaco', 'ginecomastia', 'peito masculino gordo'],
 
-  const handleSelectTerm = (term) => {
-    setQuery(term);
-    setShowSuggestions(false);
-  };
+    // --- 🦵 MEMBROS INFERIORES E GLÚTEOS ---
+    'gluteos': ['glúteos', 'bumbum', 'nádegas', 'levantamento de glúteos', 'volume glúteos', 'estética glúteos', 'celulite glúteos', 'bumbum na nuca', 'bumbum caído', 'flacidez no bumbum', 'aumentar bumbum', 'empinar bumbum'],
+    'bananinha_glutea': ['bananinha', 'gordura embaixo do bumbum', 'dobra glútea', 'dobrinha do bumbum', 'gordura subglútea', 'bumbum duplo'],
+    'depressao_trocanterica': ['hip dips', 'buraco na lateral do quadril', 'depressão lateral', 'afundamento no bumbum', 'quadril afundado', 'buraco na perna'],
+    'coxas_geral': ['coxas', 'pernas', 'gordura nas pernas', 'emagrecer pernas', 'celulite nas pernas', 'flacidez nas pernas', 'pernas grossas', 'perna flácida'],
+    'coxa_interna': ['interno de coxa', 'coxa roçando', 'atrito entre pernas', 'gordura no meio da perna', 'flacidez na virilha', 'coxa grossa', 'assadura nas pernas', 'vão entre as pernas'],
+    'culote': ['culote', 'gordura lateral da coxa', 'quadril largo', 'cartucheiras', 'gordura no quadril', 'diminuir quadril'],
+    'joelhos': ['joelhos', 'gordura no joelho', 'gordurinha acima do joelho', 'gordura suprapatelar', 'joelho gordo', 'flacidez no joelho', 'joelho enrugado', 'rosto no joelho'],
+    'panturrilha_e_tornozelo': ['panturrilha', 'batata da perna', 'tornozelo', 'tornozelo grosso', 'cankles', 'gordura no tornozelo', 'tendão de aquiles estético', 'afinar tornozelo'],
 
-  const toggleFilter = (item) => {
-    setSelectedFilters(prev => prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item]);
-  };
+    // --- 💪 MEMBROS SUPERIORES ---
+    'bracos': ['braços', 'tchauzinho', 'flacidez nos braços', 'gordura no braço', 'braço gordo', 'emagrecer braço', 'interno do braço', 'tríceps flácido', 'braço de polenta', 'braço roliço'],
+    'maos': ['mãos', 'dorso das mãos', 'mão envelhecida', 'mão de velha', 'veias nas mãos', 'manchas nas mãos', 'rejuvenescimento das mãos', 'mão ossuda'],
 
-  const handleSubmit = (e) => {
-    if (e) e.preventDefault();
-    if (!isGeoConfirmed) {
-      setShowGeoPrompt(true);
-      return;
-    }
-    if (query.trim() || selectedFilters.length > 0) {
-      onSearch(query, selectedFilters, geoScope);
-      setShowFilters(false);
-    }
-  };
+    // --- 🌸 REGIÃO ÍNTIMA ---
+    'regiao_intima': ['região íntima', 'estética íntima', 'clareamento íntimo', 'rejuvenescimento íntimo', 'flacidez íntima', 'virilha escura', 'manchas na virilha', 'clarear virilha'],
+    'grandes_labios': ['grandes lábios', 'lábios vaginais', 'flacidez nos grandes lábios', 'murchamento íntimo', 'preenchimento íntimo', 'lábio vaginal escuro', 'ninfoplastia'],
+    'monte_de_venus': ['monte de vênus', 'capô de fusca', 'gordura no púbis', 'gordura na região íntima', 'púbis alto', 'lipo de púbis', 'gordura pubiana'],
 
-  return (
-    <div className="relative flex items-center" ref={searchRef}>
-      <button 
-        type="button"
-        onClick={() => setShowGeoPrompt(!showGeoPrompt)}
-        className={`px-4 py-2 text-sm border-y border-l rounded-l-full transition-colors flex items-center space-x-2 z-50 ${
-          isGeoConfirmed ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-400' : 'bg-red-500/10 border-red-500/30 text-red-400 animate-pulse'
-        }`}
-      >
-        <MapPin size={16} />
-        <span className="font-bold hidden md:block">{isGeoConfirmed ? geoScope : 'Localização Necessária'}</span>
-        <ChevronDown size={14} />
-      </button>
+    // --- 📉 EMAGRECIMENTO E CONTORNO CORPORAL GERAL ---
+    'emagrecimento_geral': ['emagrecimento', 'perda de peso', 'perder gordura', 'emagrecer rápido', 'redução de medidas', 'perder barriga', 'queimar gordura', 'secagem de gordura', 'lipólise', 'déficit calórico estético', 'perder medida', 'secar rápido'],
+    'tipos_de_gordura': ['gordura localizada', 'gordurinha', 'gordura resistente', 'gordura teimosa', 'gordura dura', 'gordura mole', 'gordura visceral', 'fibrose', 'caroço de gordura'],
+    'retencao_e_lipedema': ['retenção de líquido', 'corpo inchado', 'inchaço', 'edema', 'lipedema', 'gordura dolorida', 'perna pesada', 'celulite inflamatória', 'linfedema', 'drenagem linfática', 'desinchar']
+  },
+// ==========================================
+  // 1. INTENÇÃO DE COMPRA E PSICOLOGIA DO CONSUMIDOR (OMNI)
+  // ==========================================
+   intencao_compra_pt: {
 
-      <form onSubmit={handleSubmit} className="relative z-40 flex items-center">
-        <input 
-          type="text" 
-          value={query}
-          onChange={handleInputChange}
-          onFocus={() => query.length > 1 && setShowSuggestions(true)}
-          placeholder="Alvo tático (ex: Morpheus8, Papada)..." 
-          className="bg-[#0b1121] border-y border-white/10 py-2 pl-4 pr-12 text-sm focus:outline-none focus:border-cyan-500 w-48 lg:w-80 transition-all text-white placeholder:text-gray-600"
-          disabled={isSearching}
-        />
-        <button 
-          type="submit" 
-          disabled={isSearching || (!query.trim() && selectedFilters.length === 0)}
-          className="absolute right-3 text-gray-400 hover:text-cyan-400 transition-colors disabled:opacity-50"
-        >
-          {isSearching ? <Loader2 size={16} className="animate-spin text-cyan-400" /> : <Search size={16} />}
-        </button>
-      </form>
+    'valor_e_investimento': [
 
-      <button 
-        type="button"
-        onClick={() => setShowFilters(!showFilters)}
-        className={`px-4 py-2 text-sm border-y border-r rounded-r-full transition-colors flex items-center space-x-2 z-40 ${
-          showFilters || selectedFilters.length > 0 ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-400' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
-        }`}
-      >
-        <SlidersHorizontal size={16} />
-        <span className="font-bold hidden md:block">Filtros</span>
-        {selectedFilters.length > 0 && <span className="bg-cyan-400 text-black text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center ml-1">{selectedFilters.length}</span>}
-      </button>
+      'preço', 'valor', 'custo', 'quanto custa', 'orçamento', 'investimento', 'tabela de preços',
 
-      {showSuggestions && suggestions.length > 0 && (
-        <div className="absolute top-12 left-32 w-full max-w-md bg-[#0b1121]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.7)] z-50 overflow-hidden">
-          <div className="p-2 bg-white/5 border-b border-white/10 text-xs font-bold text-gray-500 uppercase tracking-widest">Base de Inteligência OMNI</div>
-          <ul>
-            {suggestions.map((item, idx) => (
-              <li key={idx} onClick={() => handleSelectTerm(item.term)} className="px-4 py-3 hover:bg-cyan-500/10 cursor-pointer flex justify-between items-center border-b border-white/5 last:border-0 group">
-                <span className="text-gray-300 font-medium group-hover:text-cyan-400">{item.term}</span>
-                <span className="text-[10px] uppercase font-mono px-2 py-1 rounded bg-white/5 text-gray-500">{item.cat}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      'promoção', 'pacote', 'custo-benefício', 'formas de pagamento', 'parcelamento',
 
-      {showGeoPrompt && !isGeoConfirmed && (
-        <div className="absolute top-14 left-0 w-80 bg-[#0b1121] border border-cyan-500/30 rounded-xl shadow-2xl z-50 p-5 animate-fade-in">
-          <div className="flex items-center space-x-3 mb-4 border-b border-white/10 pb-3">
-            <Globe className="text-cyan-400" size={20} />
-            <h3 className="font-bold text-white tracking-tight">Detectamos: São Paulo - SP</h3>
-          </div>
-          <p className="text-xs text-gray-400 mb-4">Para gerar projeções precisas, defina a amplitude do radar antes da busca:</p>
-          <div className="space-y-2">
-            <button onClick={() => { setGeoScope('São Paulo (Estadual)'); setIsGeoConfirmed(true); setShowGeoPrompt(false); }} className="w-full text-left px-4 py-2 text-sm bg-white/5 hover:bg-cyan-500/20 hover:text-cyan-300 rounded border border-white/5 transition-colors">🎯 Usar Radar Local (SP)</button>
-            <button onClick={() => { setGeoScope('Brasil (Nacional)'); setIsGeoConfirmed(true); setShowGeoPrompt(false); }} className="w-full text-left px-4 py-2 text-sm bg-white/5 hover:bg-cyan-500/20 hover:text-cyan-300 rounded border border-white/5 transition-colors">🇧🇷 Radar Nacional (Brasil)</button>
-            <button onClick={() => { setGeoScope('Global (Mundo)'); setIsGeoConfirmed(true); setShowGeoPrompt(false); }} className="w-full text-left px-4 py-2 text-sm bg-white/5 hover:bg-cyan-500/20 hover:text-cyan-300 rounded border border-white/5 transition-colors">🌍 Radar Global</button>
-          </div>
-        </div>
-      )}
+      'financiamento estético', 'cupom de desconto', 'valor da sessão', 'preço médio',
 
-      {showFilters && (
-        <div className="absolute top-14 right-0 w-80 md:w-[600px] bg-[#0b1121]/95 backdrop-blur-2xl border border-white/10 rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.7)] z-50 animate-fade-in flex flex-col max-h-[80vh]">
-          <div className="p-5 border-b border-white/5">
-            <h3 className="text-sm font-bold text-cyan-400 uppercase tracking-widest flex items-center">
-              <SlidersHorizontal size={16} className="mr-2" /> Parametrização Tática
-            </h3>
-          </div>
-          <div className="p-5 overflow-y-auto custom-scrollbar flex-1 space-y-6">
-            {Object.entries(filterCategories).map(([category, items]) => (
-              <div key={category}>
-                <p className="text-xs text-gray-500 font-bold uppercase mb-3 tracking-wider">{category}</p>
-                <div className="flex flex-wrap gap-2">
-                  {items.map(item => {
-                    const isSelected = selectedFilters.includes(item);
-                    return (
-                      <button key={item} type="button" onClick={() => toggleFilter(item)} className={`text-xs px-3 py-1.5 rounded-full transition-all flex items-center space-x-1 border ${isSelected ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.2)]' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-gray-200'}`}>
-                        <span>{item}</span>{isSelected && <Check size={12} />}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="p-5 border-t border-white/5 bg-black/20 rounded-b-xl flex justify-between items-center">
-            <span className="text-xs font-mono text-gray-500">{selectedFilters.length} vetores selecionados</span>
-            <button onClick={handleSubmit} disabled={isSearching || (!query && selectedFilters.length === 0)} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-6 rounded-lg text-sm transition-all disabled:opacity-50 flex items-center shadow-[0_0_15px_rgba(6,182,212,0.3)]">
-              {isSearching ? <Loader2 size={16} className="animate-spin mr-2" /> : <Activity size={16} className="mr-2" />}
-              GERAR ANÁLISE
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+      'estética barata', 'clínica popular', 'preço botox 2024', 'preço bioestimulador',
+
+      'combo estética', 'black friday estética', 'oferta relâmpago', 'preço justo'
+
+    ],
+
+    'confianca_e_autoridade': [
+
+      'melhor clínica', 'especialista em', 'melhor médico', 'referência em', 'onde fazer',
+
+      'indicação', 'avaliações', 'doutor', 'clínica de luxo', 'médico das famosas',
+
+      'atendimento premium', 'CRM médico', 'clínica licenciada', 'especialista RQE',
+
+      'dermatologista SBD', 'clínica premiada', 'melhor biomédico', 'esteta de confiança',
+
+      'clínica com nota máxima', 'médico renomado', 'autoridade em harmonização'
+
+    ],
+
+    'prova_social_e_vlog': [
+
+      'antes e depois', 'fotos reais', 'resultado', 'depoimentos', 'casos reais',
+
+      'vlog procedimento', 'diário de recuperação', 'minha experiência com', 'resenha',
+
+      'fotos dia a dia', 'quem já fez', 'resultado imediato', 'vídeo de aplicação',
+
+      'relato real', 'fotos sem filtro', 'evolução tratamento',
+    ],
+// ==========================================
+  // 🚨 GESTÃO DE CRISE E INTERCORRÊNCIAS (O MERCADO DO MEDO E REVERSÃO)
+  // ==========================================
+  complicacoes_e_intercorrencias_pt: {
+    // 🧠 VISÃO DO PROFISSIONAL (Termos Técnicos, Diagnóstico e Protocolos)
+    'isquemia_e_necrose': [
+      'oclusão vascular', 'isquemia tecidual', 'necrose incipiente', 'sinal de livedo reticular', 
+      'branqueamento após preenchimento', 'comprometimento vascular', 'obstrução arterial', 
+      'amaurose pós preenchimento', 'cegueira por ácido hialurônico', 'síndrome de nicolau'
+    ],
+    'reacoes_tardias_e_infeccoes': [
+      'etip', 'edema tardio intermitente e persistente', 'granuloma de corpo estranho', 
+      'nódulo inflamatório', 'biofilme', 'infecção subclínica', 'abscesso pós preenchimento', 
+      'celulite facial infecciosa', 'erisipela pós procedimento', 'rejeição de pdo'
+    ],
+    'complicacoes_toxina': [
+      'ptose palpebral', 'ptose superciliar', 'diplopia pós botox', 'assimetria de sorriso', 
+      'efeito mefisto', 'sobrancelha diabólica', 'paresia facial', 'resistência botulínica', 
+      'anticorpos neutralizantes toxina'
+    ],
+    'lesoes_e_queimaduras': [
+      'hiperpigmentação pós-inflamatória', 'pih', 'queimadura de segundo grau laser', 
+      'lesão do nervo facial', 'neuropraxia', 'dano nervoso', 'efeito tyndall', 
+      'migração de preenchedor', 'fibrose cicatricial intensa'
+    ],
+    'protocolos_de_salvamento': [
+      'protocolo de hialuronidase', 'dose alta hialuronidase', 'uso de sildenafil estetica', 
+      'câmara hiperbárica necrose', 'pulsoterapia com corticoide', 'algoritmo de oclusão', 
+      'manejo de complicações faciais'
+    ],
+    // 😭 VISÃO DO PACIENTE (Sintomas, Desespero e Linguagem Leiga)
+    'sintomas_fisicos_e_visuais': [
+      'boca torta', 'rosto deformado', 'caroço no lábio', 'bolinha dura no preenchimento', 
+      'rosto muito inchado', 'inchaço que não passa', 'mancha roxa que não sai', 
+      'pele preta após preenchimento', 'dor insuportável no rosto', 'rosto quente e vermelho', 
+      'pus no preenchimento', 'pálpebra caída', 'olho não fecha', 'sorriso torto'
+    ],
+    'medo_e_panico': [
+      'medo de necrose', 'botox deu errado', 'ácido hialurônico entupiu veia', 
+      'fiquei cega com preenchimento', 'preenchimento necrosou', 'rosto caindo', 
+      'laser manchou meu rosto', 'queimadura de laser na perna', 'buraquinho no rosto após espinha'
+    ],
+    'arrependimento_e_reversao': [
+      'como tirar ácido hialurônico', 'dissolver preenchimento', 'como reverter botox', 
+      'botox passa logo?', 'arrepender de preenchimento labial', 'tirar boca de pato', 
+      'remover fios de pdo', 'derreter ácido hialurônico', 'antídoto preenchimento'
+    ],
+    'consequencias_juridicas_e_conflito': [
+      'processar clínica de estética', 'erro médico estética', 'indenização por erro estético', 
+      'esteticista errou', 'dentista errou botox', 'advogado erro médico estética', 
+      'denunciar clínica de estética', 'vítima de harmonização facial'
+    ]
+  },
+       
+  // ==========================================
+  // 2. MARCAS DE INJETÁVEIS (O MAPA DAS MOLÉCULAS)
+  // ==========================================
+// ==========================================
+  // 2. MARCAS DE INJETÁVEIS (O MAPA GLOBAL E K-BEAUTY)
+  // O Dossiê Absoluto de Fármacos e Dispositivos Injetáveis
+  // ==========================================
+  marcas_injetaveis_pt: {
+    
+    // 🧬 TOXINAS BOTULÍNICAS (Oligopólio e Genéricos)
+    'toxinas': [
+      // Linha Americana / Europeia
+      'Botox', 'Dysport', 'Xeomin', 'Jeuveau', 'Azzalure', 'Bocouture', 'Alluzience', 
+      'Daxxify', 'Nuceiva', 'Vistabel', 'Myobloc',
+      // Linha Asiática / K-Tox / Nacionais
+      'Nabota', 'Botulift', 'Prosigne', 'Botulax', 'Innotox', 'Coretox', 'Letybo', 
+      'Neuronox', 'Meditoxin', 'Liztox', 'Rentox', 'Hutox', 'Wondertox', 'Toxta', 
+      'Metox', 'K-tox', 'Siax', 'Hengli', 'Lantox', 'Relatox', 'Zentox'
+    ],
+
+    // 💧 PREENCHEDORES (Ácido Hialurônico e Não-Hialurônicos)
+    'preenchedores': [
+      // Allergan (Juvederm)
+      'Juvederm', 'Juvederm Voluma', 'Juvederm Volbella', 'Juvederm Vollure', 'Juvederm Volux', 'Juvederm Ultra XC',
+      // Galderma (Restylane)
+      'Restylane', 'Restylane Lyft', 'Restylane Silk', 'Restylane Kysse', 'Restylane Defyne', 'Restylane Refyne', 'Restylane Contour', 'Restylane Volyme',
+      // Rennova (Nacional/Importado)
+      'Rennova', 'Rennova Fill', 'Rennova Lift', 'Rennova Deep', 'Rennova Diamond', 'Rennova Ultra Deep',
+      // Europeus e Premium
+      'Belotero', 'Belotero Balance', 'Belotero Intense', 'Belotero Volume',
+      'Teosyal', 'Teosyal RHA', 'Teosyal Redensity 2', 'Teosyal Kiss',
+      'Perfectha', 'Varioderm', 'Algeness', 'Stylage', 'Saypha', 'Revanesse', 'Hylaform', 
+      'Etermis', 'Neauvia', 'Princess Filler', 'Amalian', 'Aliaxin', 'Aquamid',
+      // Linha Sul-Coreana (K-Beauty / Mercado Cinza e Legalizado)
+      'Neuramis', 'Revolax', 'Dermalax', 'e.p.t.q.', 'Bellast', 'Chaeum', 'Tesoro', 
+      'Celosome', 'Sardenya', 'Hyafilia', 'Zishel', 'Elravie', 'Rejeunesse', 'Yvoire', 'Apriline', 'Pluryal'
+    ],
+
+    // 💎 BIOESTIMULADORES E FIOS (Tracionamento e Colágeno)
+    'bioestimuladores_e_fios': [
+      // Ácido Poli-L-Láctico (PLLA)
+      'Sculptra', 'Elleva', 'AestheFill', 'Gana Fill', 'Lenisna', 'Juvelook', 'Olidia', 'PowerFill', 'Etrebelle', 'Reborn',
+      // Hidroxiapatita de Cálcio (CaHA)
+      'Radiesse', 'Radiesse Plus', 'Diamond', 'Facetem', 'Crystalys',
+      // Policaprolactona (PCL) e Híbridos
+      'Ellanse', 'HarmonyCa', 'Gouri',
+      // Colágeno Injetável
+      'Nithya', 'Linerase',
+      // Fios de Sustentação e PDO
+      'Fio Silhouette', 'Fios de PDO', 'i-Thread', 'Mint Lift', 'Miracu', 'Fios Aptos', 
+      'Fios Double Needle', 'Fios Cog', 'Fios Espiculados', 'Fios Parafuso', 'Fios Matrix', 
+      'White Rose', 'Medikoh', 'NeoGenesis', 'Croquis', 'Fios de sustentação absorb'
+    ],
+
+    // ✨ BIOREMODELADORES, SKINBOOSTERS E PDRN (DNA de Salmão)
+    'bioremodeladores_e_skin': [
+      // Bioremodeladores puros
+      'Profhilo', 'Profhilo Structura', 'Karisma', 'Viscoderm',
+      // Skinboosters (Hidratação Profunda)
+      'Restylane Vital', 'Restylane Vital Light', 'Volite', 'Teosyal Redensity 1', 
+      'Neauvia Hydro Deluxe', 'Aquashine',
+      // PDRN e Exossomos (Medicina Regenerativa)
+      'Rejuran', 'Rejuran Healer', 'Rejuran S', 'Rejuran I', 'Nucleofill', 'Plinest', 
+      'Lumi Eyes', 'Vitaran', 'Twac', 'Kiara Reju', 'Phillex',
+      // Mesclas Clássicas de Rejuvenescimento
+      'NCTF 135HA', 'Jalupro', 'RRS Hyalift', 'M-HA 10', 'Cytocare', 'H-DNA', 'Skinive', 'Xela Rederm'
+    ],
+
+    // 🔥 ESVAZIADORES (FAT DISSOLVERS), ENZIMAS E MESOTERAPIA B2B
+    'mesoterapia_e_ativos': [
+      // Marca Oficial Esvaziadores
+      'Kybella', 'Belkyra', 'Aqualyx', 'Lipodissolve', 'Lemon Bottle', 'Lipo-Lab', 
+      'Kabelline', 'V-Line', 'Dermaheal LL', 'Cincelar Plus', 'Prostrolane Inner B',
+      // Mesclas e Laboratórios de Mesoterapia (Brasil e Global)
+      'PB Serum', 'Lipo Enzimática', 'Desoxicolato', 'Lipossomas de Girassol', 
+      'Mesohyal', 'Toskani', 'Innoaesthetics', 'Fusion Mesotherapy', 'Smart GR', 
+      'Biometil', 'PHD Estetic', 'Samana', 'Cosmobeauty Injetáveis',
+      // Gestão de Complicações
+      'Hialuronidase', 'Liporase', 'Hialozima', 'Lidocaína'
+    ]
+  },
+   },
+// ==========================================
+  // 3. FABRICANTES INTERNACIONAIS (Expansão Elite)
+  // ==========================================
+  fabricantes_lasers_internacionais_pt: {
+    'alma_lasers': ['Alma Lasers', 'Soprano Ice', 'Soprano Titanium', 'Soprano Platinum', 'Harmony XL Pro', 'Accent Prime', 'Pixel CO2', 'Legato', 'DermaClear', 'Alma Hybrid', 'Opus Plasma'],
+    'candela_syneron': ['Syneron Candela', 'GentleLase', 'GentleMax Pro', 'Vbeam Perfecta', 'PicoWay', 'Nordlys', 'Profound RF', 'Velashape III', 'Frax 1550', 'Exilis'],
+    'cynosure': ['Cynosure', 'PicoSure', 'Elite IQ', 'Icon Palomar', 'SculpSure', 'Potenza RF', 'TempSure', 'Apogee', 'Revlite SI', 'PicoSure Pro'],
+    'lumenis': ['Lumenis', 'LightSheer Desire', 'LightSheer Duet', 'M22', 'ResurFX', 'Splendor X', 'Acupulse', 'UltraPulse', 'LightSheer Quattro', 'Stellar M22'],
+    'quanta_system': ['Quanta System', 'Discovery Pico', 'Thunder MT', 'Chrome Lase', 'Youlaser MT', 'Evo Light', 'Cyber Ho'],
+    'solta_medical': ['Solta Medical', 'Thermage FLX', 'Fraxel Dual', 'Clear + Brilliant', 'Liposonix'],
+    'cutera': ['Cutera', 'truSculpt iD', 'truSculpt Flex', 'Excel V+', 'Enlighten Picossegundos', 'Secret RF', 'AviClear'],
+    'lutronic': ['Lutronic', 'Spectra XT', 'LaseMD Ultra', 'Clarity II', 'Genius RF', 'Hollywood Spectra', 'DermaV', 'Healite'],
+    'sciton': ['Sciton', 'BBL Hero', 'BroadBand Light', 'Halo Laser', 'Joule X', 'ClearView', 'Moxi', 'Bare HR'],
+    'deka': ['Deka Laser', 'SmartXide DOT', 'Motus AX', 'Onda Coolwaves', 'Luxea', 'SmartXide Touch', 'RedTouch'],
+    'btl_aesthetics': ['BTL Aesthetics', 'Emsculpt Neo', 'Exilis Ultra 360', 'Emsella', 'Emface', 'Vanquish ME', 'Exion'],
+    'inmode': ['InMode', 'Morpheus8', 'BodyTite', 'FaceTite', 'Evoke', 'Lumecca IPL', 'DiolazeXL', 'AccuTite', 'EmpowerRF'],
+    'asclepion': ['Asclepion', 'MeDioStar', 'MCL31 Dermablate', 'QuadroStarPro', 'Juliet'],
+    'venus_concept': ['Venus Concept', 'Venus Legacy', 'Venus Versa', 'Venus Bliss', 'Venus Viva', 'Venus Glow'],
+    'sinclair_cocoon': ['Sinclair', 'Cocoon Medical', 'Cooltech', 'Primelase', 'Elyrion', 'Viora', 'Cooltech Define'],
+    'aerolase': ['Aerolase', 'Neo Elite', 'Era Elite'],
+    'sofwave_medical': ['Sofwave', 'Superb Technology', 'Synchronous Parallel Beam'],
+    'jeisys_medical': ['Jeisys', 'Ultracel Q+', 'LinearZ', 'Matrix RF', 'Edge ONE'],
+    'wontech': ['Wontech', 'Pastelle', 'Cosmo', 'Picocare', 'Lavieen'],
+    'sincoheren': ['Sincoheren', 'Coolplas', 'Monaliza Laser', 'Razorlase']
+  },
+
+  // ==========================================
+  // 4. FABRICANTES E DISTRIBUIDORES NACIONAIS (Expansão Total)
+  // ==========================================
+  fabricantes_lasers_nacionais_pt: {
+    'vydence': ['Vydence Medical', 'Etherea MX', 'Etherea Pro', 'Acroma QS', 'DualMode', 'Inkie', 'Zye Laser', 'Plataforma Etherea'],
+    'industra': ['Industra Technologies', 'Solon Multi Station', 'Eko CO2', 'Solon RF', 'Agnes RF', 'Solon Laser', 'Eko Laser'],
+    'adoxy': ['Adoxy', 'Andrus Criofrequência', 'Asgard VC10', 'Hygiapulse', 'Holonyx', 'Metodologia Adoxy'],
+    'tkl': ['TKL Laser', 'TKL CO2', 'TKL Diode', 'Galaxy Fiber Evo', 'Vektra QS', 'Vektra Laser'],
+    'medsystems': ['Medsystems', 'Ultraformer III', 'Ultraformer MPT', 'Scizer', 'Clatuu Alpha', 'Liftera', 'Lavieen', 'Sizer', 'Classys Brasil'],
+    'medisystems': ['Medisystems', 'StarWalker Fotona', 'TightSculpting', 'SkyWalker', 'Fotona 4D Brasil'],
+    'pontual': ['Pontual Estética', 'Chrome Laser Brasil', 'Discovery Pico Brasil'],
+    'kld': ['KLD Biosistemas', 'Ascua', 'Hertix RF', 'Lyra IPL', 'X-Wave Brasil', 'Kavix'],
+    'ibramed': ['Ibramed', 'Antares', 'Lyra', 'Thork', 'Dermosteam', 'Ares', 'Nany', 'Polarys'],
+    'loktal': ['Loktal', 'Wavetronic', 'Fraxx', 'Megapulse'],
+    'medicalsan': ['Medical San', 'Ultrafocus', 'Criodermis', 'Ethernia', 'Lipocavitação'],
+    'tonederm': ['Tone Derm', 'Spectra G3', 'Narniah', 'Lipocavity'],
+    'bioset': ['Bio-set', 'Linis', 'Criocuplace', 'Maxishape', 'Endocavity'],
+    'htm_eletronica': ['HTM Eletrônica', 'Light Pulse', 'Hibridi', 'Ultrafocus', 'Stimulus'],
+    'mmoptics': ['MM Optics', 'Laserpulse', 'Vacuoderm', 'Lumina']
+  },
+
+  // ==========================================
+  // 5. TIPOS DE TECNOLOGIA (A FÍSICA DA LUZ - COMPLETA)
+  // ==========================================
+  tipos_tecnologia_laser_pt: {
+    'ablativos': ['Laser CO2 Fracionado', 'Laser Erbium YAG 2940nm', 'Resurfacing Ablativo', 'Peeling de Fenol Laser', 'Laser 10600nm', 'Ablação por Plasma'],
+    'nao_ablativos': ['Laser Erbium Glass 1550nm', 'Laser Nd:YAG 1064nm', 'Rejuvenescimento não ablativo', 'Laser de Diodo Estético', 'Laser 1340nm', 'Sublative RF'],
+    'thulium_bb_laser': ['Laser de Thulium 1927nm', 'BB Laser', 'Lavieen', 'LaseMD', 'Laser de Lavagem', 'Glass Skin'],
+    'picossegundos': ['Laser de Picossegundos', 'Pico Laser', 'Picosure', 'Picoway', 'Discovery Pico', 'Pico-Toning'],
+    'q_switched': ['Laser Q-Switched', 'Acroma', 'Spectra', 'Vektra', 'Hollywood Peel', 'Carbon Peel', 'Remoção de Tatuagem'],
+    'vascular_e_amarelo': ['Laser Vascular', 'Vbeam Perfecta', 'Laser KTP 532nm', 'Laser Amarelo 577nm', 'Dye Laser', 'Laser 585nm', 'Laser para Rosácea'],
+    'depilacao_e_diodo': ['Laser de Diodo Depilação', 'Laser Alexandrite', 'Laser Rubi', 'Luz Intensa Pulsada Depilação', 'Laser 755nm', 'Laser 808nm', 'Laser 1064nm Long Pulse'],
+    'ultrassom_hifu': ['Ultrassom Microfocado', 'HIFU', 'Ultraformer', 'Ultherapy', 'Liftera', 'Sofwave', 'Ultrassom Macrofocado', 'Mente'],
+    'radiofrequencia_e_plasma': ['Radiofrequência Microagulhada', 'Morpheus8', 'Potenza', 'Scarlet RF', 'Plasma Frio', 'Jato de Plasma', 'Fibroblast'],
+    'luz_e_led': ['IPL', 'Luz Pulsada', 'Lumecca', 'BBL Hero', 'Fotorejuvenescimento', 'LEDterapia', 'Terapia Fotodinâmica', 'PDT'],
+    'criolipolise_e_ondas': ['Criolipólise', 'Coolsculpting', 'Cristal Cryolipolysis', 'Clatuu Alpha', 'Onda Coolwaves', 'Micro-ondas Estético', 'Ondas de Choque']
+  },
+
+  // ==========================================
+  // 6. COMPARAÇÕES ESTRATÉGICAS (CONFLITOS DE MERCADO)
+  // ==========================================
+comparacoes_estrategicas_pt: {
+    'conflitos_injetaveis': [
+      'Botox ou Preenchimento', 'Diferença entre Botox e Preenchimento',
+      'Sculptra ou Radiesse', 'Sculptra ou Ellansé', 'Sculptra ou Elleva',
+      'Radiesse ou Diamond', 'AestheFill ou Sculptra', 'Elleva ou Sculptra',
+      'Profhilo ou Skinbooster', 'Profhilo ou Ácido Hialurônico',
+      'PDRN ou Skinbooster', 'Exossomos ou PDRN', 'Juvelook ou Sculptra',
+      'Preenchimento ou Bioestimulador', 'Fios de PDO ou Preenchimento',
+      'Fios de Sustentação ou Bioestimulador', 'Harmonização ou Naturalidade'
+    ],
+    'conflitos_tecnologias_faciais': [
+      'Ultraformer ou Ultherapy', 'Ultraformer ou Liftera', 'Ultraformer ou Sofwave',
+      'Ultraformer ou Lavieen', 'Lavieen ou CO2 Fracionado', 'Lavieen ou Spectra',
+      'Morpheus8 ou Ultraformer', 'Morpheus8 ou Potenza', 'Potenza ou RF Microagulhada',
+      'Fotona ou Ultraformer', 'Fotona 4D ou StarWalker', 'BBL Hero ou Lumecca',
+      'Luz Pulsada ou Laser para Manchas', 'Microagulhamento ou Laser CO2',
+      'Peeling de Fenol ou Laser CO2', 'HIFU ou Radiofrequência'
+    ],
+    'conflitos_tecnologias_corporais': [
+      'Coolsculpting ou Criolipólise de placas', 'Coolsculpting ou Scizer',
+      'Emsculpt ou CM Slim', 'Emsculpt Neo ou Bioestimulador',
+      'Enzimas ou Criolipólise', 'Lipo Enzimática ou Lipo HD',
+      'Onda Coolwaves ou Ultraformer', 'Velashape ou Endermologia',
+      'BodyTite ou Lipoaspiração', 'Morpheus8 Corporal ou Scizer'
+    ],
+    'conflitos_marcas_dispositivos': [
+      'Ultraformer III ou Ultraformer MPT', 'Soprano Titanium ou Ice Platinum',
+      'LightSheer ou Soprano', 'Etherea ou Solon', 'Etherea ou Zye',
+      'Lavieen ou BB Laser', 'Picosure ou Picoway', 'Discovery Pico ou Picosure',
+      'Medsystems ou Vydence', 'Fotona ou Alma Lasers', 'Sincoheren ou Medical San'
+    ],
+    'conflitos_custo_beneficio': [
+      'Laser ou Peeling para Melasma', 'Bioestimulador ou Fios para Flacidez',
+      'HIFU ou Cirurgia de Pálpebras', 'Rinomodelação ou Rinoplastia',
+      'Lipo de Papada com Enzimas ou Laser', 'Vale a pena fazer Ultraformer'
+    ]
+  },
+  // ==========================================
+  // 7. COSMECÊUTICOS DE LUXO (SHARE OF POCKET)
+  // ==========================================
+  cosmeceuticos_luxo_pt: {
+    'skinceuticals': ['Skinceuticals', 'CE Ferulic', 'Phloretin CF', 'Blemish + Age Defense', 'H.A. Intensifier', 'Discoloration Defense', 'Silymarin CF'],
+    'isdin': ['ISDIN', 'Fotoprotector ISDIN', 'Isdinceutics', 'K-Ox Eyes', 'Isdin Melaclear', 'Eryfotona Ak-NMSC'],
+    'la_roche_premium': ['La Roche-Posay', 'Effaclar Serum', 'Hyalu B5', 'Pure Vitamin C10', 'Anthelios UV Mune 400', 'Retinol B3'],
+    'vichy_premium': ['Vichy', 'Mineral 89', 'Liftactiv Specialist', 'Vichy Neovadiol', 'Dercos Técnica Capilar'],
+    'marcas_med_grade': ['Mesoestetic', 'Obagi Medical', 'Zo Skin Health', 'Skinmedica', 'Skinive', 'Bioderma Sensibio', 'Caudalie Vinoperfect'],
+    'ativos_farmacia': ['Vitanol A', 'Azelan', 'Epiduo', 'Manteccorp Ivy C', 'Adcos Filtro Solar com Cor', 'Profuse Essence']
+  },
+
+  // ==========================================
+  // 8. INSUMOS E LOGÍSTICA B2B (ESPIONAGEM INDUSTRIAL)
+  // ==========================================
+  b2b_logistica_pt: {
+    'locacao_de_equipamentos': [
+      'Locação de Ultraformer', 'Aluguel de Lavieen', 'Locação de Laser CO2', 
+      'Aluguel de Soprano Titanium', 'Locação de Scizer', 'Aluguel de Etérea MX', 
+      'Locação de máquinas de estética', 'Aluguel de Criolipólise', 'Locação de Morpheus8'
+    ],
+    'suprimentos_medicos': [
+      'Comprar Cânulas', 'Microcânula 22G', 'Microcânula 25G', 'Seringa BD 1ml', 
+      'Agulha 30G estetica', 'Ponteira Ultraformer original', 'Ponteira Morpheus descartável',
+      'Gel condutor galão', 'Álcool 70 hospitalar', 'Luva nitrílica rosa', 'Máscara PFF2'
+    ],
+    'comercio_de_toxina': [
+      'Botox atacado', 'Comprar Dysport médico', 'Distribuidora de injetáveis', 
+      'Soro fisiológico 0.9%', 'Anestésico TKTX', 'Creme anestésico manipulado',
+      'Hialuronidase comprar', 'Bioestimulador preço revenda'
+    ]
+
+    },
+
+  // ==========================================
+  // 🟢 NOVO: FÁRMACOS, GENÉRICOS E MANIPULADOS (In & Out)
+  // O Arsenal Médico de Preparo e Complicações
+  // ==========================================
+// ==========================================
+  // 🟢 FÁRMACOS, GENÉRICOS, MANIPULADOS E MESOTERAPIA (In & Out)
+  // O Arsenal Médico: Skincare, Nutracêuticos, Emagrecimento e Recuperação
+  // ==========================================
+  farmacos_e_manipulados_pt: {
+    
+    // 💉 ANESTÉSICOS E MANEJO DA DOR
+    'anestesicos_topicos_e_injetaveis': [
+      'lidocaína', 'tetracaína', 'benzocaína', 'tktx', 'dermomax', 'emla',
+      'pomada anestésica manipulada', 'anestésico para microagulhamento', 
+      'prilocaína', 'ropivacaína', 'bupivacaína', 'mepivacaína', 
+      'anestesia odontológica para preenchimento', 'creme anestésico potente', 'pumice anestésico'
+    ],
+
+    // 🛡️ PROFILAXIA, ANTIBIÓTICOS E ANTIEQUIMOSES (Roxos)
+    'profilaxia_e_prevencao': [
+      'aciclovir', 'valaciclovir', 'prevenção de herpes labial', 'profilaxia pós peeling',
+      'arnica montana', 'vitamina k', 'prevenção de hematomas', 'bromelina', 'heparina sódica',
+      'cefalexina', 'amoxicilina', 'azitromicina', 'pomada antibiótica', 'nebacetin', 
+      'mupirocina', 'gel para roxos', 'hirudoid', 'thrombocid'
+    ],
+
+    // 🩹 REPARAÇÃO DE BARREIRA E CICATRIZAÇÃO PÓS-PROCEDIMENTO
+    'pos_procedimento_cicatrizacao': [
+      'dexpantenol', 'bepantol', 'cicaplast', 'reparador de barreira cutânea', 
+      'creme calmante pós laser', 'epidrat calm', 'profuse nutrel', 'cicalfate', 
+      'kelo-cote', 'stratamed', 'dersani', 'óleo de girassol ozonizado', 
+      'pomada cicatrizante', 'adesivo hidrocoloide', 'tegaderm', 'micropore cirúrgico',
+      'polissulfato de mucopolissacarídeo', 'creme com pantenol'
+    ],
+
+    // 🛑 ANTI-INFLAMATÓRIOS E CORTICOIDES (Orais e Tópicos)
+    'anti_inflamatorios_e_corticoides': [
+      'dexametasona', 'prednisona', 'corticoide para inchaço', 'anti-inflamatório pós cirúrgico', 
+      'ibuprofeno estética', 'betametasona', 'triancinolona injetável', 'corticoide para queloide', 
+      'desonida', 'hidrocortisona', 'nimesulida', 'celecoxibe', 'cetoprofeno'
+    ],
+
+    // ☁️ DESPIGMENTANTES, ÁCIDOS E MANEJO DE MELASMA
+    'despigmentantes_e_melasma': [
+      'ácido tranexâmico oral', 'ácido tranexâmico tópico', 'cisteamina', 'cysteamine',
+      'hidroquinona manipulada', 'arbutin', 'alfa arbutin', 'ácido kójico', 'ácido fítico',
+      'fórmula tríplice', 'fórmula de kligman', 'peeling de margarida', 'ácido azeilaico', 
+      'vitamina c tópica alta concentração', 'niacinamida', 'thiamidol', 'ácido mandélico', 
+      'ácido glicólico', 'ácido retinóico', 'tretinoína', 'vitanol a', 'vitacid', 
+      'suavicid', 'hormoskin', 'blancy', 'klasssis', 'pigmentclar'
+    ],
+
+    // 💊 NUTRACÊUTICOS, IN & OUT E FOTOPROTEÇÃO ORAL
+    'nutraceuticos_e_fotoprotecao_oral': [
+      'polypodium leucotomos', 'picnogenol', 'filtro solar em cápsula', 'oli-ola', 
+      'exsynutriment', 'bio-arct', 'fosfolipídeos de caviar', 'fc oral', 'luteína', 
+      'astaxantina', 'glycoxil', 'extrato de romã', 'pomegranate', 'fotoproteção oral'
+    ],
+
+    // ✨ SUPLEMENTAÇÃO ANTI-AGING E NUTRICOSMÉTICOS
+    'suplementacao_preventiva': [
+      'verisol', 'peptídeos bioativos de colágeno', 'glutationa', 'vitamina c lipossomal', 
+      'coenzima q10', 'resveratrol', 'silício orgânico', 'nutricolin', 'biotina', 
+      'ácido hialurônico oral', 'pantogar', 'pill food', 'pqq', 'nmn', 'nad+', 'siliciu max'
+    ],
+
+    // 🌋 MANEJO DE ACNE E OLEOSIDADE (Tópicos e Hormonais)
+    'tratamento_acne_hormonal': [
+      'espironolactona', 'roacutan', 'isotretinoína', 'antibiótico para acne', 
+      'ácido azelaico manipulado', 'espirolactona para estética', 'peróxido de benzoíla', 
+      'adapaleno', 'epiduo', 'clindamicina', 'sabonete de ácido salicílico', 
+      'roacutan manipulado', 'ciproterona', 'flutamida'
+    ],
+
+    // 💧 ATIVOS INJETÁVEIS (Mesoterapia, Intradermoterapia e Esvaziadores)
+    'ativos_injetaveis_mesoterapia': [
+      'desoxicolato de sódio', 'l-carnitina injetável', 'cafeína injetável', 'crisina', 
+      'meliloto', 'rutina', 'silício orgânico injetável', 'dmae injetável', 'enzimas lipolíticas', 
+      'vitamina c injetável', 'mescla para flacidez', 'mescla para gordura localizada', 
+      'intradermoterapia ativos', 'enzima de papada', 'esvaziadores de gordura', 'lipolíticos'
+    ],
+
+    // 💇 TERAPIA CAPILAR FARMACOLÓGICA
+    'terapia_capilar_farmacos': [
+      'minoxidil oral', 'minoxidil tópico', 'finasterida', 'dutasterida', 'latanoprosta', 
+      'bimatoprosta', 'fatores de crescimento capilar', 'igf capilar', 'vegf', 
+      'terapia capilar manipulada', 'shampoo de cetoconazol', 'loção capilar manipulada'
+    ],
+
+    // ⚖️ GERENCIAMENTO DE PESO E METABOLISMO (Impacto Estético)
+    'emagrecimento_e_metabolismo': [
+      'ozempic para emagrecer', 'wegovy', 'saxenda', 'liraglutida', 'semaglutida', 
+      'mounjaro', 'tirzepatida', 'morosil', 'orlistat', 'bupropiona para emagrecer', 
+      'naltrexona', 'caneta para emagrecer', 'inibidor de apetite', 'faseolamina', 'cactinea'
+    ]
+  },
 };
 
-// --- COMPONENTE: DOSSIÊ MCKINSEY ---
-const ReportDashboard = ({ data, onClose, onNewSearch }) => {
-  if (!data) return null;
+// ==========================================
+// 🧠 SAE CORE: SEARCH-AUTOMATION ENGINE
+// Processamento Dinâmico em Memória
+// ==========================================
+const keywordsDB = [];
 
-  return (
-    <div className="fixed inset-0 z-[100] bg-[#030712]/95 backdrop-blur-2xl flex justify-center overflow-y-auto custom-scrollbar">
-      <div className="w-full max-w-[1400px] min-h-screen bg-transparent relative animate-fade-in print:bg-white print:text-black">
+// Função Hash para criar determinismo nas métricas
+const hashString = (str) => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) hash = Math.imul(31, hash) + str.charCodeAt(i) | 0;
+    return Math.abs(hash);
+};
+
+// Flatten & Index do dicionário
+console.log("⚙️ Compilando Dicionário OMNI no Motor...");
+for (const [categoryKey, categoryData] of Object.entries(KEYWORDS)) {
+    const categoryName = categoryKey.split('_')[0].toUpperCase();
+    const languageCode = categoryKey.split('_')[1];
+    
+    let conceptIndex = 0; // 🟢 NOVO: Rastreador de conceito paralelo
+
+    for (const [mainTerm, synonyms] of Object.entries(categoryData)) {
+        const seed = hashString(mainTerm);
+        const volume = 10000 + (seed % 250000);
+        const cpc = (seed % 40) + 2;
+        const ticket = 500 + (seed % 6000);
+
+        keywordsDB.push({
+            term: mainTerm.toLowerCase(),
+            synonyms: synonyms.map(s => s.toLowerCase()),
+            category: categoryName,
+            language: languageCode,
+            conceptIndex: conceptIndex, // 🟢 NOVO: Salva o ID paralelo
+            volume,
+            cpc,
+            ticket
+        });
         
-        <div className="sticky top-0 z-50 bg-[#030712]/80 backdrop-blur-xl border-b border-white/5 p-6 px-10 flex justify-between items-center">
-          <div className="flex items-center space-x-4">
-            <div className="w-14 h-14 bg-gradient-to-br from-cyan-500/20 to-indigo-600/20 rounded-xl flex items-center justify-center border border-cyan-500/30 shadow-[0_0_20px_rgba(6,182,212,0.2)]">
-              <Database className="text-cyan-400" size={28} />
-            </div>
-            <div>
-              <h2 className="text-3xl font-black tracking-tighter text-white uppercase">{data.keyword}</h2>
-              <div className="flex items-center space-x-3 text-sm font-mono text-cyan-400 mt-1">
-                <span className="flex items-center"><MapPin size={12} className="mr-1"/> {data.region}</span>
-                <span>|</span>
-                <span>STATUS: {data.narrative.status}</span>
-              </div>
-            </div>
-          </div>
-          <div className="flex space-x-3">
-            <button onClick={onNewSearch} className="px-4 py-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg text-sm font-bold transition-colors">Nova Pesquisa</button>
-            <button onClick={() => window.print()} className="px-5 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-sm font-bold transition-all shadow-[0_0_15px_rgba(6,182,212,0.4)] flex items-center space-x-2">
-              <Download size={16} /> <span>Dossiê Executivo (PDF)</span>
-            </button>
-            <button onClick={onClose} className="p-2.5 bg-white/5 hover:bg-red-500/20 hover:text-red-400 rounded-lg text-gray-400 transition-colors"><X size={24} /></button>
-          </div>
-        </div>
+        conceptIndex++; // Incrementa para o próximo termo
+    }
+}
+console.log(`✅ Base pronta: ${keywordsDB.length} entidades macro mapeadas em 8 idiomas.`);
 
-        <div className="p-10 space-y-10 pb-32">
+// Algoritmo de Busca Fuzzy OMNI
+const saeSearch = (query, filters) => {
+    const q = query.toLowerCase().trim();
+    
+    // 1. Busca exata no termo principal
+    let bestMatch = keywordsDB.find(k => k.term === q);
+    
+    // 2. Busca exata nos sinônimos
+    if (!bestMatch) {
+        bestMatch = keywordsDB.find(k => k.synonyms.includes(q));
+    }
 
-          {/* NOVO BLOCO 0: SCORE DE OPORTUNIDADE */}
-          <section className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="bg-gradient-to-br from-cyan-900/40 to-[#0b1121] border border-cyan-500/30 rounded-2xl p-6 shadow-[0_0_20px_rgba(6,182,212,0.15)] flex flex-col justify-center items-center text-center">
-              <p className="text-xs font-black text-cyan-400 uppercase tracking-widest mb-2">Score de Oportunidade OMNI</p>
-              <p className="text-6xl font-black text-white drop-shadow-md">{data.marketScore.overall_score}</p>
-            </div>
-            <div className="bg-[#0b1121] border border-white/10 rounded-2xl p-6 flex flex-col justify-center text-center">
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Média Geral do Mercado</p>
-              <p className="text-4xl font-black text-gray-300">{data.marketScore.market_average}</p>
-            </div>
-            <div className="bg-[#0b1121] border border-white/10 rounded-2xl p-6 flex flex-col justify-center text-center">
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Potencial Est. (Receita/Mês)</p>
-              <p className="text-4xl font-black text-green-400">{data.marketScore.total_potential}</p>
-            </div>
-            <div className="bg-[#0b1121] border border-white/10 rounded-2xl p-6 flex flex-col justify-center text-center">
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Termo Mais Rentável</p>
-              <p className="text-2xl font-black text-indigo-400 truncate w-full px-2" title={data.marketScore.best_keyword}>{data.marketScore.best_keyword}</p>
-            </div>
-          </section>
+    // 3. Busca Parcial (Fuzzy)
+    if (!bestMatch) {
+        const matches = keywordsDB.filter(k => k.term.includes(q) || k.synonyms.some(s => s.includes(q)));
+        if (matches.length > 0) bestMatch = matches[0]; 
+    }
 
-          <section className="bg-[#0b1121] border border-white/10 rounded-2xl p-8 shadow-xl">
-            <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.2em] mb-6 flex items-center">
-              <MessageSquare className="mr-2 text-indigo-400" size={16}/> Executive Summary & Inteligência
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-6 text-sm text-gray-300 leading-relaxed">
-              <div className="md:col-span-1 bg-black/20 p-5 rounded-xl border border-white/5">
-                <p className="text-cyan-400 font-bold uppercase mb-2 text-xs">Contexto Macro</p>
-                {data.narrative.context}
-              </div>
-              <div className="md:col-span-1 bg-black/20 p-5 rounded-xl border border-white/5">
-                <p className="text-indigo-400 font-bold uppercase mb-2 text-xs">Análise de Dados</p>
-                {data.narrative.analysis}
-              </div>
-              <div className="md:col-span-1 bg-black/20 p-5 rounded-xl border border-white/5">
-                <p className="text-yellow-400 font-bold uppercase mb-2 text-xs">Interpretação</p>
-                {data.narrative.interpretation}
-              </div>
-              <div className="md:col-span-1 bg-gradient-to-b from-green-500/10 to-transparent p-5 rounded-xl border border-green-500/20">
-                <p className="text-green-400 font-bold uppercase mb-2 text-xs">Recomendação Tática</p>
-                {data.narrative.recommendation}
-              </div>
-              <div className="md:col-span-1 bg-gradient-to-b from-red-500/10 to-transparent p-5 rounded-xl border border-red-500/20">
-                <p className="text-red-400 font-bold uppercase mb-2 text-xs">Risco e Saturação</p>
-                {data.narrative.risk}
-              </div>
-            </div>
-          </section>
+    // 4. Fallback Dinâmico Computado (Se o usuário buscar algo totalmente fora)
+    if (!bestMatch) {
+        const seed = hashString(q);
+        bestMatch = {
+            term: query,
+            synonyms: [],
+            category: filters.length > 0 ? filters[0] : "Inteligência Tática",
+            volume: 5000 + (seed % 50000),
+            cpc: (seed % 20) + 3,
+            ticket: 800 + (seed % 3000)
+        };
+    }
 
-          {/* SAAS VS ESTÉTICA BENCHMARKS */}
-          <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="bg-[#0b1121] border border-white/10 rounded-2xl p-8 shadow-xl">
-              <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.2em] mb-6 flex items-center">
-                <Globe className="mr-2 text-indigo-400" size={16}/> Benchmarks Mercado de Software (SaaS)
-              </h3>
-              <div className="grid grid-cols-2 gap-y-6 gap-x-4">
-                <div><p className="text-[10px] uppercase text-gray-500 font-bold mb-1">Conversão Base</p><p className="text-2xl font-mono text-white">{data.saasBenchmarks.conversion}</p></div>
-                <div><p className="text-[10px] uppercase text-gray-500 font-bold mb-1">Visitante → Lead</p><p className="text-2xl font-mono text-white">{data.saasBenchmarks.visitor_to_lead}</p></div>
-                <div><p className="text-[10px] uppercase text-gray-500 font-bold mb-1">Lead → Cliente</p><p className="text-2xl font-mono text-cyan-400">{data.saasBenchmarks.lead_to_customer}</p></div>
-                <div><p className="text-[10px] uppercase text-gray-500 font-bold mb-1">Trial → Pago</p><p className="text-2xl font-mono text-green-400">{data.saasBenchmarks.trial_to_paid}</p></div>
-                <div><p className="text-[10px] uppercase text-gray-500 font-bold mb-1">CAC Médio</p><p className="text-2xl font-mono text-red-400">{data.saasBenchmarks.cac}</p></div>
-                <div><p className="text-[10px] uppercase text-gray-500 font-bold mb-1">Churn Mensal</p><p className="text-2xl font-mono text-gray-300">{data.saasBenchmarks.churn}</p></div>
-              </div>
-            </div>
-
-            <div className="bg-[#0b1121] border border-white/10 rounded-2xl p-8 shadow-xl">
-              <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.2em] mb-6 flex items-center">
-                <Activity className="mr-2 text-cyan-400" size={16}/> Benchmarks Clínicas de Estética (BR)
-              </h3>
-              <div className="grid grid-cols-2 gap-y-6 gap-x-4">
-                <div><p className="text-[10px] uppercase text-gray-500 font-bold mb-1">Lead → Cliente</p><p className="text-2xl font-mono text-white">{data.esteticaBenchmarks.lead_to_client}</p></div>
-                <div><p className="text-[10px] uppercase text-gray-500 font-bold mb-1">Conv. WhatsApp</p><p className="text-2xl font-mono text-white">{data.esteticaBenchmarks.whatsapp_conversion}</p></div>
-                <div><p className="text-[10px] uppercase text-gray-500 font-bold mb-1">Ticket Médio</p><p className="text-2xl font-mono text-green-400">{data.esteticaBenchmarks.ticket_medio}</p></div>
-                <div><p className="text-[10px] uppercase text-gray-500 font-bold mb-1">Retorno de Clientes</p><p className="text-2xl font-mono text-indigo-400">{data.esteticaBenchmarks.retorno_clientes}</p></div>
-                <div><p className="text-[10px] uppercase text-gray-500 font-bold mb-1">CAC Médio</p><p className="text-2xl font-mono text-cyan-400">{data.esteticaBenchmarks.cac}</p></div>
-                <div><p className="text-[10px] uppercase text-gray-500 font-bold mb-1">ROI Ads Médio</p><p className="text-2xl font-mono text-yellow-400">{data.esteticaBenchmarks.roi_ads}</p></div>
-              </div>
-            </div>
-          </section>
-
-          {/* KEYWORD OPPORTUNITY ANALYSIS */}
-          <section className="bg-[#0b1121] border border-white/10 rounded-2xl p-8 shadow-xl overflow-x-auto">
-            <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.2em] mb-6 flex items-center">
-              <Crosshair className="mr-2 text-red-400" size={16}/> Análise Isolada de Palavras-Chave (Competitividade)
-            </h3>
-            <table className="w-full text-left min-w-[800px]">
-              <thead className="border-b border-white/10 text-xs uppercase tracking-widest text-gray-500">
-                <tr>
-                  <th className="pb-4">Keyword Principal</th>
-                  <th className="pb-4">Vol. Estimado</th>
-                  <th className="pb-4">Concorrência Ads</th>
-                  <th className="pb-4">Dificuldade Orgânica</th>
-                  <th className="pb-4">Conv. Estimada</th>
-                  <th className="pb-4 text-right">Score Oportunidade</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {data.keywordsAnalysis.map((kw, i) => (
-                  <tr key={i} className="hover:bg-white/[0.02] transition-colors">
-                    <td className="py-5 font-bold text-white">{kw.keyword}</td>
-                    <td className="py-5 font-mono text-gray-300">{Number(kw.volume).toLocaleString('pt-BR')}</td>
-                    <td className="py-5 text-gray-400">{kw.competition}</td>
-                    <td className="py-5 font-mono text-gray-300">{kw.difficulty}</td>
-                    <td className="py-5 font-mono text-cyan-400">{kw.conversion_estimate}</td>
-                    <td className="py-5 text-right font-black text-green-400">{kw.score}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-
-          <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 bg-[#0b1121] border border-white/10 rounded-2xl p-8">
-              <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.2em] mb-6 flex items-center">
-                <Globe className="mr-2 text-cyan-400" size={16}/> Benchmarking Tático: {data.region} vs Global
-              </h3>
-              <table className="w-full text-left">
-                <thead className="border-b border-white/10 text-xs uppercase text-gray-500">
-                  <tr><th className="pb-3">Métrica</th><th className="pb-3 text-cyan-400">{data.region}</th><th className="pb-3 text-indigo-400">Global (Média)</th><th className="pb-3 text-right">Delta OMNI</th></tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                  {data.comparison.map((row, i) => (
-                    <tr key={i} className="hover:bg-white/[0.02]">
-                      <td className="py-4 font-bold text-gray-300">{row.metric}</td>
-                      <td className="py-4 text-white font-mono">{row.br}</td>
-                      <td className="py-4 text-gray-400 font-mono">{row.global}</td>
-                      <td className={`py-4 text-right font-black ${row.delta.includes('+') ? 'text-green-400' : 'text-red-400'}`}>{row.delta}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="bg-gradient-to-br from-indigo-900/20 to-black border border-indigo-500/30 rounded-2xl p-8 relative overflow-hidden">
-               <div className="absolute -right-10 -top-10 text-indigo-500/10"><TrendingUp size={150} /></div>
-               <h3 className="text-xs font-black text-indigo-400 uppercase tracking-[0.2em] mb-6 flex items-center relative z-10">
-                <Target className="mr-2" size={16}/> Future Projection (Oráculo)
-              </h3>
-              <div className="space-y-6 relative z-10">
-                <div className="bg-black/40 p-4 rounded-xl border border-white/5">
-                  <p className="text-xs text-gray-500 uppercase mb-1">Horizonte 3 Meses</p>
-                  <p className="text-sm text-gray-200 font-medium">{data.projections.m3}</p>
-                </div>
-                <div className="bg-black/40 p-4 rounded-xl border border-white/5">
-                  <p className="text-xs text-gray-500 uppercase mb-1">Horizonte 6 Meses</p>
-                  <p className="text-sm text-gray-200 font-medium">{data.projections.m6}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-indigo-400 font-bold uppercase mb-2">Sub-Tendências Emergentes:</p>
-                  <ul className="space-y-2">
-                    {data.projections.trends.map((t, i) => (
-                      <li key={i} className="text-xs text-gray-400 flex items-center"><ArrowUpRight size={12} className="text-green-400 mr-2"/> {t}</li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="bg-[#0b1121] border border-white/10 rounded-2xl p-8">
-              <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.2em] mb-6 flex items-center">
-                <Activity className="mr-2 text-cyan-400" size={16}/> Top 5 Procedimentos Correlatos
-              </h3>
-              <div className="space-y-4">
-                {data.topProcedures.map((proc, idx) => (
-                  <div key={idx} className="bg-white/5 p-4 rounded-xl flex flex-col border border-white/5 hover:border-cyan-500/30 transition-colors">
-                    <div className="flex justify-between items-center mb-2 border-b border-white/5 pb-2">
-                      <div>
-                        <p className="font-bold text-white text-sm">{proc.name}</p>
-                        <p className="text-xs text-gray-500 mt-1">Ticket Médio: <span className="text-green-400">R$ {proc.ticket}</span></p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs font-bold uppercase text-gray-400">Demanda</p>
-                        <p className="font-mono font-black text-cyan-400">{proc.volume}</p>
-                      </div>
-                    </div>
-                    <p className="text-xs text-gray-400 italic">"{proc.interpretation}"</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-[#0b1121] border border-white/10 rounded-2xl p-8">
-              <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.2em] mb-6 flex items-center">
-                <Zap className="mr-2 text-yellow-400" size={16}/> Top Hardware & EBDs Recomendados
-              </h3>
-              <div className="space-y-4">
-                {data.topLasers.map((laser, idx) => (
-                  <div key={idx} className="bg-white/5 p-4 rounded-xl flex justify-between items-center border border-white/5 hover:border-yellow-500/30 transition-colors">
-                    <div>
-                      <p className="font-bold text-white text-sm flex items-center">
-                        {laser.name} <span className="ml-2 text-[10px] bg-white/10 px-2 py-0.5 rounded text-gray-400">{laser.type}</span>
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">{laser.maker} • Origem: {laser.origin}</p>
-                      <p className="text-xs text-indigo-400 mt-1">Foco: {laser.apps}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs font-bold uppercase text-gray-400">ROI Est.</p>
-                      <p className="font-mono font-black text-yellow-400">{laser.roi}</p>
-                      <p className="text-[10px] text-gray-500 mt-1">Custo: {laser.cost}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-
-        </div>
-      </div>
-    </div>
-  );
+    return bestMatch;
 };
+// 🟢 NOVA FUNÇÃO: Busca as traduções mapeadas pelo conceptIndex
+const getOmniTranslations = (matchData) => {
+    if (!matchData || matchData.conceptIndex === undefined) return null;
 
-// --- GERAÇÃO DO "MORNING BRIEFING" DIÁRIO (MOCK ENQUANTO API CARREGA) ---
-const generateDailyBriefing = () => ({
-  keyword: "Panorama Global Diário",
-  region: "Brasil (Visão Geral OMNI)",
-  category: "Inteligência de Mercado Ativa",
-  marketScore: {
-    overall_score: "88/100", market_average: "72/100", best_keyword: "Bioestimulador PLLA", total_potential: "R$ 4.2M/mês"
-  },
-  saasBenchmarks: {
-    conversion: "2.8%", visitor_to_lead: "5.5%", lead_to_customer: "14.2%",
-    trial_to_paid: "22.5%", churn: "3.8%", ltv_cac: "3.5:1", cac: "R$ 450,00", close_rate: "18%"
-  },
-  esteticaBenchmarks: {
-    lead_to_client: "12.5%", ticket_medio: "R$ 1.850,00", cac: "R$ 85,00",
-    roi_ads: "420%", retorno_clientes: "65%", whatsapp_conversion: "19.5%",
-    landing_conversion: "4.8%", churn: "15%"
-  },
-  keywordsAnalysis: [
-    { keyword: "Ultraformer MPT", volume: "85000", competition: "Alta", difficulty: "78/100", conversion_estimate: "3.5%", score: "82/100" },
-    { keyword: "Toxina Botulínica", volume: "320000", competition: "Extrema", difficulty: "95/100", conversion_estimate: "8.0%", score: "75/100" },
-    { keyword: "Bioestimulador PLLA", volume: "45000", competition: "Média", difficulty: "55/100", conversion_estimate: "5.2%", score: "91/100" },
-    { keyword: "Lavieen", volume: "110000", competition: "Alta", difficulty: "70/100", conversion_estimate: "6.1%", score: "88/100" }
-  ],
-  narrative: {
-    status: "ATUALIZAÇÃO MATINAL",
-    context: "Análise automática das últimas 24h revela forte tração em buscas por procedimentos de prevenção ativa e flacidez corporal.",
-    analysis: "Comparado ao mercado de SaaS, as clínicas de estética apresentam um LTV muito superior e um CAC agressivamente menor nas campanhas locais do Google Ads.",
-    interpretation: "A janela de oportunidade atual reside em associar tecnologias de alto ticket (HIFU/Lasers) com injetáveis na mesma sessão.",
-    recommendation: "Reajuste o budget de Ads de hoje focado em topo de funil para 'Bioestimulador PLLA' com ênfase em pacientes 35+.",
-    risk: "Alta saturação em anúncios de 'Toxina Botulínica'. Evite leilões diretos para esse termo no dia de hoje."
-  },
-  comparison: [
-    { metric: 'Volume Mensal Est.', br: '142.000', global: '2.1M', delta: '+14% BR' },
-    { metric: 'Taxa de Crescimento (Y/Y)', br: '34%', global: '18%', delta: '+16% BR' },
-    { metric: 'Ticket Médio', br: 'R$ 1.800', global: 'US$ 650', delta: 'Margem Alta' },
-    { metric: 'Saturação (Ads)', br: 'Alto', global: 'Extremo', delta: 'Oceano Azul Regional' }
-  ],
-  projections: {
-    m3: "Crescimento de 12% sustentado por campanhas pré-verão e conscientização online.",
-    m6: "Necessidade de empacotar procedimentos para não competir por preço na Black Friday.",
-    trends: ["Resultados ultra-naturais", "Associação com Medicina Regenerativa", "Protocolos de sessão única"]
-  },
-  topProcedures: [
-    { name: "Preenchimento Facial 3D", volume: "45k", ticket: "2.500", interpretation: "Alta sinergia de venda cruzada." },
-    { name: "Bioestimulador PLLA", volume: "38k", ticket: "3.200", interpretation: "Excelente para ancoragem de preço e autoridade." },
-    { name: "Fios de Sustentação", volume: "12k", ticket: "4.000", interpretation: "Baixa concorrência em anúncios locais. Demanda oculta." },
-    { name: "Peeling Avançado", volume: "25k", ticket: "800", interpretation: "Produto Tripwire (entrada) para qualificar o paciente." }
-  ],
-  topLasers: [
-    { type: "HIFU", name: "Ultraformer MPT", maker: "Classys", origin: "Coreia", cost: "R$ 400k", roi: "6 Meses", apps: "Lifting Facial e Corporal" },
-    { type: "Thulium", name: "Lavieen", maker: "Wontech", origin: "Coreia", cost: "R$ 250k", roi: "4 Meses", apps: "BB Laser, Manchas e Poros" },
-    { type: "Nd:YAG", name: "StarWalker", maker: "Fotona", origin: "Eslovênia", cost: "R$ 600k", roi: "12 Meses", apps: "Remoção de Tatuagem, Melasma" }
-  ]
+    // Busca no DB todos os termos da mesma categoria e mesmo índice, mas de idiomas diferentes
+    const translations = keywordsDB.filter(k => 
+        k.category === matchData.category && 
+        k.conceptIndex === matchData.conceptIndex &&
+        k.language !== matchData.language
+    );
+
+    // Monta um objeto limpo ex: { en: "botulinum toxin", es: "toxina botulínica", ... }
+    const result = {};
+    translations.forEach(t => {
+        result[t.language] = t.term.replace(/\b\w/g, l => l.toUpperCase()); // Formata bonitinho
+    });
+
+    return result;
+};
+// Seeds Temporais
+const getDailySeed = () => Math.floor(Date.now() / (1000 * 60 * 60 * 24));
+const getWeeklySeed = () => Math.floor(Date.now() / (1000 * 60 * 60 * 24 * 7));
+
+// ==========================================
+// 📡 ROTA 1: LIVE RADAR 3.0 (Sinais Vitais Diários)
+// ==========================================
+app.get('/api/radar', (req, res) => {
+    const seed = getDailySeed();
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 15;
+
+    // Pega os top termos da base de dados brasileira para monitorar
+    const activeMonitoring = keywordsDB.filter(k => k.language === 'pt').slice(0, 150); 
+
+    let radarData = activeMonitoring.map((item, index) => {
+        // O seed diário faz os números mudarem a cada 24h
+        const volatilidade = (Math.sin(seed + index + hashString(item.term)) * 150); 
+        const evolucao = parseFloat(volatilidade.toFixed(2));
+        
+        let status_tendencia = 'PROCESSANDO';
+        if (evolucao > 80) status_tendencia = 'EXPLOSÃO (TRENDING)';
+        else if (evolucao > 15) status_tendencia = 'ASCENSÃO SÓLIDA';
+        else if (evolucao < 0) status_tendencia = 'RESFRIAMENTO (QUEDA)';
+        else status_tendencia = 'ALTO RISCO DE SATURAÇÃO';
+
+        // Estiliza o termo para exibição (Primeira letra maiúscula)
+        const displayTerm = item.term.replace(/\b\w/g, l => l.toUpperCase());
+
+        return { 
+            termo_chave: displayTerm, 
+            mercado: item.category,
+            evolucao, 
+            status_tendencia 
+        };
+    });
+
+    // Rankeia
+    radarData.sort((a, b) => b.evolucao - a.evolucao);
+
+    // Paginação
+    const startIndex = (page - 1) * limit;
+    const endIndex = page * limit;
+    const paginatedData = radarData.slice(startIndex, endIndex);
+
+    res.json({
+        data: paginatedData,
+        meta: {
+            current_page: page,
+            total_pages: Math.ceil(radarData.length / limit),
+            has_more: endIndex < radarData.length,
+            last_update: new Date().toISOString()
+        }
+    });
 });
 
-// --- APLICAÇÃO PRINCIPAL ---
-export default function App() {
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [liveData, setLiveData] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const [isSearching, setIsSearching] = useState(false);
-  const [reportData, setReportData] = useState(null);
-  const [usageInfo, setUsageInfo] = useState({ date: '', count: 0 });
-  const [showLimitAlert, setShowLimitAlert] = useState(false);
-
-  useEffect(() => {
-    // 1. Controle de Limite de Consultas
-    setUsageInfo(checkDailyLimit());
-    const handleScroll = () => setIsScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', handleScroll);
-
-    // 2. GATILHO DO "MORNING BRIEFING" (Pop-up Diário)
-    const today = new Date().toDateString();
-    const lastBriefing = localStorage.getItem('sae_last_briefing');
-    if (lastBriefing !== today) {
-      setReportData(generateDailyBriefing());
-      localStorage.setItem('sae_last_briefing', today);
-    }
-
-    // 3. FETCH DO LIVE RADAR (Com Prevenção de Tela Vazia / Fallback)
-    const fetchInteligencia = async () => {
-      try {
-        const response = await fetch('https://sae-9wqa.onrender.com/api/radar');
-        const fetchedData = await response.json();
-        setLiveData(fetchedData && fetchedData.length > 0 ? fetchedData : fallbackRadarData);
-        setIsLoading(false);
-      } catch (error) {
-        setLiveData(fallbackRadarData); // Se a API cair, injeta a base tática
-        setIsLoading(false);
-      }
-    };
+// ==========================================
+// 🎯 ROTA 2: DOSSIÊ MCKINSEY (Motor de Projeção)
+// ==========================================
+app.post('/api/dossie', (req, res) => {
+    const { keyword, filters, region } = req.body;
+    const weekSeed = getWeeklySeed();
     
-    fetchInteligencia();
-    const interval = setInterval(fetchInteligencia, 10000); 
+    const searchTarget = keyword || (filters && filters.length > 0 ? filters.join(' ') : 'Análise Geral');
+    
+    // 🧠 1. Aciona a busca na Base
+    const saeData = saeSearch(searchTarget, filters || []);
+    
+    // 🌍 1.5. Busca Global de Traduções (OMNI)
+    const globalTranslations = getOmniTranslations(saeData);
+    
+    // 🧮 2. Derivação de Métricas Reais
+    const baseVolume = saeData.volume;
+    const baseCpc = saeData.cpc;
+    const baseTicket = saeData.ticket;
+    const displayTerm = saeData.term.toUpperCase();
+    
+    const potRevenue = (baseVolume * 0.02 * baseTicket); 
+    const hashData = hashString(searchTarget);
 
-    return () => { window.removeEventListener('scroll', handleScroll); clearInterval(interval); };
-  }, []);
+    // Gráfico Semanal
+    const chartData = Array.from({ length: 6 }).map((_, i) => ({
+        v: Math.floor(10 + Math.abs(Math.sin(weekSeed + i + hashData) * 90))
+    }));
 
-  const handleSearch = async (query, filters, geo) => {
-    const currentUsage = checkDailyLimit();
-    if (currentUsage.count >= DAILY_LIMIT) {
-      setShowLimitAlert(true);
-      return;
-    }
-
-    setIsSearching(true);
-    setShowLimitAlert(false);
-
-    try {
-      const keywordTarget = query || filters.join(' + ') || 'Análise de Mercado Ampla';
-      const regionTarget = geo || "Brasil (Nacional)";
-
-      const response = await fetch('https://sae-9wqa.onrender.com/api/dossie', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ keyword: keywordTarget, filters: filters, region: regionTarget })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Erro Backend (Status ${response.status})`);
-      }
-
-      const realDynamicSchema = await response.json();
-      incrementUsage(currentUsage);
-      setUsageInfo(currentUsage);
-      setReportData(realDynamicSchema);
-
-    } catch (error) {
-      console.error("Falha na Integração RABI:", error);
-      alert("⚠️ SISTEMA AGUARDANDO ATUALIZAÇÃO DO BACKEND\nA requisição real foi disparada, mas a rota '/api/dossie' no motor.js falhou. Vamos atualizar o Backend!");
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-[#030712] text-white font-sans selection:bg-cyan-500/30 pb-20">
-      
-      {reportData && <ReportDashboard data={reportData} onClose={() => setReportData(null)} onNewSearch={() => setReportData(null)} />}
-      
-      {showLimitAlert && (
-        <div className="fixed top-24 left-1/2 transform -translate-x-1/2 z-50 bg-red-500/10 border border-red-500/50 backdrop-blur-md px-6 py-4 rounded-xl flex items-center space-x-4 animate-fade-in shadow-[0_0_30px_rgba(239,68,68,0.2)]">
-          <AlertTriangle className="text-red-400" size={24} />
-          <div>
-            <p className="font-bold text-red-100">Limite de Consultoria Atingido</p>
-            <p className="text-sm text-red-200/70">O limite de {DAILY_LIMIT} análises foi excedido. Retorne amanhã ou faça o upgrade.</p>
-          </div>
-          <button onClick={() => setShowLimitAlert(false)} className="ml-4 p-1 hover:bg-white/10 rounded"><X size={16} className="text-red-300"/></button>
-        </div>
-      )}
-
-      <nav className={`fixed top-0 w-full z-40 transition-all duration-700 px-4 md:px-10 py-4 flex items-center justify-between ${isScrolled ? 'bg-[#030712]/95 backdrop-blur-lg border-b border-white/5' : 'bg-transparent'}`}>
-        <div className="flex items-center space-x-12">
-          <h1 className="text-3xl md:text-5xl font-black tracking-tighter cursor-pointer flex items-center space-x-2">
-            <ShieldCheck className="text-cyan-400" size={36} />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-indigo-500 italic hidden md:block">SAE</span>
-            <span className="text-white not-italic font-light hidden md:block">OMNI</span>
-          </h1>
-        </div>
+    // 🏗️ 3. Construção do Schema (Padrão Frontend)
+    const responseSchema = {
+        keyword: displayTerm,
+        region: region || "Brasil (Nacional)",
+        category: saeData.category,
         
-        <SmartSearchBar onSearch={handleSearch} isSearching={isSearching} />
-
-        <div className="flex items-center space-x-6">
-          <div className="hidden lg:flex items-center space-x-2 text-xs font-mono bg-white/5 border border-white/10 px-3 py-1.5 rounded-full text-gray-400">
-            <Activity size={14} className={usageInfo.count >= DAILY_LIMIT ? 'text-red-400' : 'text-green-400'}/>
-            <span>{usageInfo.count}/{DAILY_LIMIT} Consultas</span>
-          </div>
-          <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-[0_0_15px_rgba(6,182,212,0.4)]">OP</div>
-        </div>
-      </nav>
-      
-      <DashboardHeader />
-      
-      <main className="max-w-7xl mx-auto px-4 md:px-10 py-12 relative z-10">
+        // 🟢 TRADUÇÕES INJETADAS AQUI
+        global_terms: globalTranslations,
         
-        <section className="mb-20">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center space-x-3">
-              <Activity className="text-cyan-400 animate-pulse" size={32} />
-              <h2 className="text-3xl md:text-4xl font-black tracking-tight">Live Radar 3.0 <span className="text-xl text-gray-500 font-light ml-2 hidden md:inline">(Sinais Vitais do Mercado)</span></h2>
-            </div>
-          </div>
-          <div className="bg-[#0b1121] border border-white/5 rounded-2xl overflow-hidden shadow-2xl overflow-x-auto">
-            {isLoading ? (
-              <div className="p-12 text-center text-cyan-500 font-mono text-lg animate-pulse">Iniciando Sincronização OMNI...</div>
-            ) : (
-              <table className="w-full text-left min-w-[800px]">
-                <thead className="bg-black/50 text-xs uppercase tracking-widest text-gray-500 border-b border-white/5">
-                  <tr><th className="p-5">Termo Identificado / Anomalia</th><th className="p-5">Mercado</th><th className="p-5">Força do Sinal (%)</th><th className="p-5">Status Preditivo</th></tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                  {liveData.map((item, i) => {
-                    const evolucao = item.evolucao || 0;
-                    let StatusIcon = TrendingUp;
-                    let statusColor = "text-indigo-400 bg-indigo-500/20 border-indigo-500/30";
-                    let statusText = item.status_tendencia || 'PROCESSANDO';
+        marketScore: {
+            overall_score: `${Math.floor(65 + (Math.abs(Math.sin(hashData)) * 34))}/100`, 
+            market_average: "72/100",
+            best_keyword: (saeData.synonyms && saeData.synonyms[0]) ? saeData.synonyms[0].toUpperCase() : displayTerm,
+            total_potential: `R$ ${(potRevenue / 1000000).toFixed(1)}M/mês`
+        },
+        
+        saasBenchmarks: {
+            conversion: "2.8%", visitor_to_lead: "5.5%", lead_to_customer: "14.2%",
+            trial_to_paid: "22.5%", churn: "3.8%", cac: "R$ 450,00"
+        },
+        
+        esteticaBenchmarks: {
+            lead_to_client: `${(8 + (Math.abs(Math.cos(hashData)) * 10)).toFixed(1)}%`, 
+            ticket_medio: `R$ ${baseTicket.toLocaleString('pt-BR')}`, 
+            cac: `R$ ${Math.floor(baseCpc * 8.5)},00`, 
+            roi_ads: `${Math.floor(200 + (Math.abs(Math.sin(hashData)) * 400))}%`, 
+            retorno_clientes: "65%", 
+            whatsapp_conversion: "19.5%"
+        },
+        
+        keywordsAnalysis: [
+            { keyword: `${displayTerm} Valor`, volume: Math.floor(baseVolume * 0.8), competition: "Alta", difficulty: "78/100", conversion_estimate: "3.5%", score: "82/100" },
+            { keyword: `${displayTerm} Antes e Depois`, volume: Math.floor(baseVolume * 1.5), competition: "Extrema", difficulty: "95/100", conversion_estimate: "1.2%", score: "45/100" },
+            { keyword: `${displayTerm} Dói?`, volume: Math.floor(baseVolume * 0.4), competition: "Média", difficulty: "55/100", conversion_estimate: "8.2%", score: "94/100" }
+        ],
 
-                    if (evolucao > 100) { StatusIcon = Flame; statusColor = "text-red-400 bg-red-500/20 border-red-500/30"; statusText = "EXPLOSÃO (TRENDING)"; }
-                    else if (evolucao > 20) { StatusIcon = ArrowUpRight; statusColor = "text-green-400 bg-green-500/20 border-green-500/30"; statusText = "ASCENSÃO SÓLIDA"; }
-                    else if (evolucao < 0) { StatusIcon = Snowflake; statusColor = "text-cyan-400 bg-cyan-500/20 border-cyan-500/30"; statusText = "RESFRIAMENTO (QUEDA)"; }
-                    else { StatusIcon = AlertCircle; statusColor = "text-yellow-400 bg-yellow-500/20 border-yellow-500/30"; statusText = "ALTO RISCO DE SATURAÇÃO"; }
+        narrative: {
+            status: "SÍNTESE OMNI (SAE)",
+            context: `Motor SAE identificou ${baseVolume.toLocaleString('pt-BR')} buscas paramétricas para "${displayTerm}". Tração concentrada no topo de funil da categoria ${saeData.category}.`,
+            analysis: `O CAC projetado de R$ ${Math.floor(baseCpc * 8.5)} frente a um ticket de R$ ${baseTicket.toLocaleString('pt-BR')} apresenta margem líquida excelente.`,
+            interpretation: "Cenário de oportunidade confirmada. A ausência de diferenciação técnica dos concorrentes locais permite ancoragem de preço.",
+            recommendation: `Implementar modelo de assinatura ou pacotes focados em ${displayTerm} para diluir o CAC inicial em 3 meses.`,
+            risk: "Guerra de lances no Google Ads. Custo por clique (CPC) em tendência de alta nas próximas semanas."
+        },
+        
+        comparison: [
+            { metric: 'Volume Mensal Est.', br: baseVolume.toLocaleString('pt-BR'), global: (baseVolume * 14).toLocaleString('pt-BR'), delta: '+14% BR' },
+            { metric: 'Taxa de Conversão (Ads)', br: '1.5%', global: '2.8%', delta: '-1.3% BR' },
+            { metric: 'Ticket Médio (USD)', br: `$ ${(baseTicket / 5).toFixed(0)}`, global: '$ 650', delta: 'Oportunidade' }
+        ],
 
-                    return (
-                      <tr key={i} className="hover:bg-white/[0.02] transition-colors group">
-                        <td className="p-5 font-bold text-lg text-gray-200 group-hover:text-cyan-400">{item.termo_chave}</td>
-                        <td className="p-5 text-gray-400">{item.mercado}</td>
-                        <td className={`p-5 font-mono font-black text-lg ${evolucao > 0 ? 'text-green-400' : 'text-red-400'}`}>{evolucao > 0 ? '+' : ''}{evolucao.toFixed(2)}%</td>
-                        <td className="p-5">
-                          <span className={`text-xs font-black uppercase px-3 py-1.5 rounded flex items-center w-max border ${statusColor}`}>
-                            <StatusIcon size={14} className="mr-2" /> {statusText}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </section>
+        projections: {
+            m3: `Estabilização do CAC e aumento de 15% na retenção via cross-sell da categoria ${saeData.category}.`,
+            m6: "Necessidade de atualização de protocolo para manter o LTV elevado. Risco de fadiga visual nas campanhas.",
+            trends: [`Associação Híbrida de ${displayTerm}`, "Protocolos Express", "Alta Definição"],
+            chartData: chartData 
+        },
 
-        <section className="mb-20">
-          <div className="flex items-center space-x-3 mb-8">
-            <DollarSign className="text-cyan-400" size={32} />
-            <h2 className="text-4xl font-black tracking-tight">Impacto em Performance</h2>
-          </div>
-          <MetricsComparison />
-        </section>
+        topProcedures: [
+            { name: `Protocolo ${displayTerm} 3D`, volume: Math.floor(baseVolume * 0.3).toString(), ticket: (baseTicket * 1.5).toLocaleString('pt-BR'), interpretation: "Venda cruzada direta." },
+            { name: "Manutenção Preventiva", volume: Math.floor(baseVolume * 0.15).toString(), ticket: (baseTicket * 0.8).toLocaleString('pt-BR'), interpretation: "Aumento de LTV." }
+        ],
+        topLasers: [
+            { type: "HIFU", name: "Ultraformer MPT", maker: "Classys", origin: "Coreia", cost: "R$ 400k", roi: "6 Meses", apps: "Lifting" },
+            { type: "Ablativo", name: "CO2 Fracionado", maker: "Diversos", origin: "Global", cost: "R$ 150k", roi: "3 Meses", apps: "Resurfacing" }
+        ]
+    };
 
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-10 mb-20">
-          <div className="lg:col-span-2">
-            <div className="flex items-center space-x-3 mb-8">
-              <Database className="text-indigo-400" size={32} />
-              <h2 className="text-4xl font-black tracking-tight">Taxonomia OMNI V48</h2>
-            </div>
-            <TaxonomyGrid />
-          </div>
-          <div className="lg:col-span-1">
-            <div className="flex items-center space-x-3 mb-8">
-              <TrendingUp className="text-cyan-400" size={32} />
-              <h2 className="text-4xl font-black tracking-tight">Projeção de Crescimento</h2>
-            </div>
-            <ChartWidget />
-          </div>
-        </section>
-
-      </main>
-
-      <footer className="fixed bottom-0 w-full bg-[#030712]/90 backdrop-blur-md border-t border-white/5 py-4 px-10 flex flex-col md:flex-row justify-between items-center text-sm text-gray-500 font-mono z-40 gap-4">
-        <div className="flex items-center space-x-8">
-          <span className="flex items-center space-x-2">
-            <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse shadow-[0_0_8px_#06b6d4]"/> 
-            <span className="text-cyan-400 font-bold">API CONECTADA (RENDER CLOUD)</span>
-          </span>
-          <span className="hidden md:inline">CENÁRIOS: 252.841</span>
-        </div>
-
-        <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs font-sans tracking-widest uppercase">
-          <a href="https://instagram.com/callmepewk" target="_blank" rel="noreferrer" className="text-gray-400 hover:text-cyan-400 transition-colors">CTO: @callmepewk</a>
-          <a href="https://instagram.com/aidoctorbr" target="_blank" rel="noreferrer" className="text-gray-400 hover:text-cyan-400 transition-colors">@aidoctorbr</a>
-          <a href="https://instagram.com/alemoraisadv" target="_blank" rel="noreferrer" className="text-gray-400 hover:text-cyan-400 transition-colors">@alemoraisadv</a>
-          <a href="https://github.com/drjauru" target="_blank" rel="noreferrer" className="text-gray-400 hover:text-cyan-400 transition-colors">drjauru</a>
-          <a href="https://youtube.com/@codigosdolaser" target="_blank" rel="noreferrer" className="text-gray-400 hover:text-red-500 transition-colors">Códigos do Laser</a>
-        </div>
-
-        <div className="hidden lg:block">
-          SAE OMNI INTELLIGENCE CORE © 2026
-        </div>
-      </footer>
-    </div>
-  );
-}
-
-const DashboardHeader = () => (
-  <header className="relative pt-40 pb-16 px-4 md:px-10 border-b border-white/5 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-900/20 via-[#030712] to-[#030712]">
-    <div className="max-w-7xl mx-auto">
-      <div className="flex flex-col md:flex-row justify-between items-end gap-8">
-        <div className="max-w-3xl">
-          <div className="inline-flex items-center space-x-2 bg-cyan-500/10 border border-cyan-500/20 px-4 py-2 rounded-full mb-6">
-            <Globe size={16} className="text-cyan-400" />
-            <span className="text-sm font-bold text-cyan-400 tracking-widest uppercase">Global Market Intelligence</span>
-          </div>
-          <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-white mb-6 leading-tight">
-            O motor preditivo do<br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-indigo-500">Comercial Médico.</span>
-          </h1>
-          <p className="text-gray-400 text-lg leading-relaxed max-w-2xl">
-            Mais do que métricas. Uma consultoria algorítmica desenhada para antecipar o fluxo de capital, expor saturações tecnológicas e guiar a aquisição de pacientes de alto ticket.
-          </p>
-        </div>
-        <div className="flex space-x-4 w-full md:w-auto justify-center">
-          <div className="bg-white/5 border border-white/10 p-6 rounded-xl text-center backdrop-blur-md w-full">
-            <p className="text-sm text-gray-500 uppercase tracking-widest font-bold mb-2">Monitoramento Ativo</p>
-            <p className="text-4xl font-black text-cyan-400">+1.2M</p>
-            <p className="text-xs text-gray-600 mt-2">Dores e Termos Clínicos</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </header>
-);
-
-const MetricsComparison = () => (
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-    {performanceData.map((item, idx) => (
-      <div key={idx} className="bg-[#0b1121] border border-cyan-900/30 rounded-2xl p-6 relative overflow-hidden group hover:border-cyan-500/50 transition-colors">
-        <div className="absolute -right-10 -top-10 w-32 h-32 bg-cyan-500/10 rounded-full blur-3xl group-hover:bg-cyan-500/20 transition-all" />
-        <h4 className="text-gray-400 text-base font-bold uppercase tracking-widest mb-4">{item.metric}</h4>
-        <div className="flex justify-between items-end mb-4">
-          <div>
-            <p className="text-sm text-gray-500 uppercase tracking-wider mb-1">Sem RABI</p>
-            <p className="text-2xl text-gray-400 line-through decoration-red-500/50">{item.textB}</p>
-          </div>
-          <div className="text-right">
-            <p className="text-sm text-cyan-500 uppercase tracking-wider mb-1 font-bold">Com OMNI</p>
-            <p className="text-4xl font-black text-white">{item.textA}</p>
-          </div>
-        </div>
-        <div className={`mt-4 pt-4 border-t border-white/5 font-black text-right text-lg ${item.color}`}>IMPACTO: {item.impact}</div>
-      </div>
-    ))}
-  </div>
-);
-
-const TaxonomyGrid = () => (
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-    {taxonomyData.map((tax, idx) => (
-      <div key={idx} className="bg-white/[0.02] border border-white/5 p-5 rounded-xl hover:bg-white/[0.04] transition-all">
-        <div className="flex justify-between items-start mb-3">
-          <tax.icon size={24} className="text-indigo-400" />
-          <span className="bg-indigo-500/10 text-indigo-300 text-sm font-black px-3 py-1 rounded tracking-widest">{tax.count}</span>
-        </div>
-        <h3 className="text-lg font-bold text-gray-200 mb-1">{tax.title}</h3>
-        <p className="text-base text-gray-500 leading-relaxed">{tax.desc}</p>
-      </div>
-    ))}
-  </div>
-);
-
-const ChartWidget = () => (
-  <div className="bg-[#0b1121] border border-white/5 rounded-2xl p-6 h-[320px] flex flex-col relative overflow-hidden">
-    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 to-indigo-600" />
-    <h3 className="text-base font-bold text-gray-400 uppercase tracking-widest mb-6">Eficiência Predita de Captação</h3>
-    <ResponsiveContainer width="100%" height="100%">
-      <AreaChart data={mockChartData}>
-        <defs>
-          <linearGradient id="colorOmni" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.5}/>
-            <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
-          </linearGradient>
-        </defs>
-        <Tooltip contentStyle={{ backgroundColor: '#030712', borderColor: '#1f2937' }} />
-        <Area type="monotone" dataKey="v" stroke="#06b6d4" strokeWidth={4} fill="url(#colorOmni)" />
-      </AreaChart>
-    </ResponsiveContainer>
-  </div>
-);
+    setTimeout(() => {
+        res.json(responseSchema);
+    }, 1500); // Simulador de processamento
+});
